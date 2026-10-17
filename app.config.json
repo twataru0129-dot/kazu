@@ -1,0 +1,9 @@
+{
+  "appName": "かずあそび（仮）",
+  "shortName": "かずあそび",
+  "description": "すうじで あそぶ・かんがえる・まなぶ アプリ",
+  "themeColor": "#3a8fd6",
+  "backgroundColor": "#f4faff",
+  "backupFormat": "suuji-app-backup",
+  "dbName": "kazu-asobi"
+}
