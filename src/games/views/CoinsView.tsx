@@ -4,6 +4,7 @@ import { parseAnswer } from '../../domain/input';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 import { Coin } from './Coin';
 
 export function CoinsView({ puzzle: p, submit, solved, status, hintLevel }: GameViewProps<CoinsPuzzle, number | null>) {
@@ -43,11 +44,13 @@ export function CoinsView({ puzzle: p, submit, solved, status, hintLevel }: Game
         </button>
       </div>
       {status}
-      <div className="row center">
-        <span style={{ fontWeight: 700 }}>ぜんぶで</span>
-        <AnswerBox value={value} active={!solved} label="きんがく" />
-        <span style={{ fontWeight: 700 }}>えん</span>
-      </div>
+      <InDock>
+        <div className="row center">
+          <span style={{ fontWeight: 700 }}>ぜんぶで</span>
+          <AnswerBox value={value} active={!solved} label="きんがく" />
+          <span style={{ fontWeight: 700 }}>えん</span>
+        </div>
+      </InDock>
       <NumberPad value={value} onChange={setValue} onSubmit={() => submit(parseAnswer(value))} disabled={solved} maxDigits={5} />
     </section>
   );

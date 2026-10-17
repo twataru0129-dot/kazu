@@ -6,6 +6,7 @@ import { parseAnswer } from '../../domain/input';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 const sym = (o: AddSubOp) => (o === '+' ? '+' : '−');
 
@@ -56,6 +57,7 @@ export function PittariView({ puzzle: p, submit, found, status }: GameViewProps<
         </div>
       </div>
       {status}
+      <InDock>
       <div className="row center">
         <button type="button" className="btn" onClick={() => setFocus((focus + p.terms - 1) % p.terms)} aria-label="まえの はこ">
           ◀
@@ -65,6 +67,7 @@ export function PittariView({ puzzle: p, submit, found, status }: GameViewProps<
           ▶
         </button>
       </div>
+      </InDock>
       <NumberPad value={vals[focus]} onChange={(v) => setVals((o) => o.map((x, i) => (i === focus ? v : x)))} onSubmit={onSubmit} allowEmptySubmit maxDigits={3} />
       {found.length > 0 && (
         <div className="card">

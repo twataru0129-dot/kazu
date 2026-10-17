@@ -3,6 +3,7 @@ import { bounds, centroid, coverage, placedTris, rotated, type Placement, type S
 import { play } from '../../audio/sfx';
 import { IconRotate } from '../../components/Icons';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 interface Draft {
   placements: (Placement | null)[];
@@ -54,6 +55,24 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
   const wrapRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<SVGSVGElement>(null);
   const [avail, setAvail] = useState(320);
+  const [viewH, setViewH] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 700));
+  const [dockH, setDockH] = useState(0);
+
+  useLayoutEffect(() => {
+    const dock = wrapRef.current?.closest('main')?.querySelector<HTMLElement>('.dock');
+    const update = () => {
+      setViewH(window.visualViewport?.height ?? window.innerHeight);
+      setDockH(dock?.offsetHeight ?? 0);
+    };
+    update();
+    const ro = typeof ResizeObserver !== 'undefined' && dock ? new ResizeObserver(update) : null;
+    if (dock) ro?.observe(dock);
+    window.addEventListener('resize', update);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, []);
   const lastSubmitted = useRef('');
 
   useLayoutEffect(() => {
@@ -66,8 +85,8 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
     return () => ro?.disconnect();
   }, []);
 
-  // 盤面は 横幅と 画面の高さの半分の どちらにも 収まる大きさにする
-  const maxH = typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400;
+  // 盤面は 横幅と「画面の高さ − 下の操作ドック − 見出し」の どちらにも 収まる大きさにする
+  const maxH = Math.max(160, viewH - dockH - 150);
   const cs = Math.max(28, Math.min(72, Math.floor((avail - 32) / (p.width + 0.3)), Math.floor(maxH / (p.height + 0.3))));
   const shapeOf = (i: number) => rotated(p.pieces[i].tris, rots[i]);
 
@@ -232,11 +251,12 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
         うまった ところ：{Math.round((cov.covered / cov.total) * 100)}%{cov.overlap ? '・かさなりが あるよ' : ''}
       </div>
       {status}
-      <div className="row center" aria-label="ピース">
+      <InDock>
+      <div className="row center" aria-label="ピース" style={{ gap: 6 }}>
         {p.pieces.map((pc, i) => {
           const t = shapeOf(i);
           const b = bounds(t);
-          const s = Math.min(34, cs * 0.6);
+          const s = 24; // 盤面の大きさに連動させない（ドックの高さ→盤面→ドック…の循環を防ぐ）
           const placed = placements[i] !== null;
           return (
             <button
@@ -252,7 +272,7 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
                   setSelected(selected === i ? null : i);
                 }
               }}
-              style={{ padding: 6, borderRadius: 14, borderColor: selected === i ? '#1b2838' : undefined, borderWidth: selected === i ? 3 : 2, opacity: placed ? 0.4 : 1, touchAction: 'none', minWidth: 64, minHeight: 64 }}
+              style={{ padding: 3, borderRadius: 12, borderColor: selected === i ? '#1b2838' : undefined, borderWidth: selected === i ? 3 : 2, opacity: placed ? 0.4 : 1, touchAction: 'none', minWidth: 52, minHeight: 52 }}
             >
               <svg viewBox={`-0.1 -0.1 ${b.w + 0.2} ${b.h + 0.2}`} width={(b.w + 0.2) * s} height={(b.h + 0.2) * s} aria-hidden>
                 <Tris tris={t} fill={pc.color} />
@@ -261,9 +281,9 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
           );
         })}
       </div>
-      <div className="row center">
+      <div className="row center" style={{ flexWrap: 'nowrap' }}>
         {p.allowRotate && (
-          <button type="button" className="btn big" onClick={rotateSelected} disabled={selected === null || solved}>
+          <button type="button" className="btn" onClick={rotateSelected} disabled={selected === null || solved}>
             <span style={{ width: 26, height: 26, display: 'inline-flex' }}>
               <IconRotate />
             </span>
@@ -274,6 +294,7 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
           もどす
         </button>
       </div>
+      </InDock>
       {drag?.moved && (
         <div
           aria-hidden

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { boxOf, colOf, conflicts, rowOf, sudokuHintCell, type SudokuAnswer, type SudokuPuzzle } from '../../domain/games/sudoku';
 import { play } from '../../audio/sfx';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 interface Draft {
   grid: number[];
@@ -55,7 +56,7 @@ export function SudokuView({ puzzle: p, submit, solved, status, draft, saveDraft
       <div
         role="grid"
         aria-label="すうどく"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', width: 'min(100%, 360px)', margin: '0 auto', border: '4px solid #1b2838', borderRadius: 12, overflow: 'hidden', background: '#1b2838', gap: 0 }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', width: 'min(100%, 360px, calc(100dvh - var(--dock-h, 0px) - 150px))', minWidth: 220, margin: '0 auto', border: '4px solid #1b2838', borderRadius: 12, overflow: 'hidden', background: '#1b2838', gap: 0 }}
       >
         {grid.map((v, i) => {
           const given = p.givens[i] !== 0;
@@ -101,19 +102,21 @@ export function SudokuView({ puzzle: p, submit, solved, status, draft, saveDraft
         })}
       </div>
       {status}
-      <div className="row center" role="group" aria-label="すうじ">
+      <InDock>
+      <div className="row center" role="group" aria-label="すうじ" style={{ flexWrap: 'nowrap', gap: 6 }}>
         {[1, 2, 3, 4].map((n) => (
-          <button key={n} type="button" className="btn big num" style={{ fontSize: '1.6rem', minWidth: 60 }} onClick={() => setCell(n)} disabled={solved}>
+          <button key={n} type="button" className="btn big num" style={{ fontSize: '1.6rem', minWidth: 0, flex: '1 1 0', padding: 0 }} onClick={() => setCell(n)} disabled={solved}>
             {n}
           </button>
         ))}
-        <button type="button" className="btn big" onClick={() => setCell(0)} disabled={solved}>
+        <button type="button" className="btn big" onClick={() => setCell(0)} disabled={solved} style={{ flex: '1 1 0', minWidth: 0, padding: 0 }}>
           けす
         </button>
       </div>
       <button type="button" className="btn primary big" onClick={check} disabled={solved || grid.some((v) => v === 0)}>
         こたえあわせ
       </button>
+      </InDock>
       {grid.some((v) => v === 0) && !solved && <p className="center-text small muted">ぜんぶ うめたら こたえあわせ できるよ</p>}
     </section>
   );

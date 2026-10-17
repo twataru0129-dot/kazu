@@ -42,6 +42,33 @@ body {
 }
 body {
   min-height: 100dvh;
+  /* 子ども向けの文は「わかち書き」。語の途中で改行せず、空白で改行する。
+     1語が長すぎて入らないときだけ、はみ出さないように折り返す。 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+p,
+h1,
+h2,
+h3,
+.feedback,
+.hint-panel li,
+.banner {
+  text-wrap: pretty;
+}
+.center-text,
+.feedback {
+  text-wrap: balance;
+}
+/* 漢字の多い おとな向けの文は ふつうの改行にもどす */
+.adult-text {
+  word-break: normal;
+  line-break: auto;
+}
+/* 意味のまとまりで改行する（まとまりの途中では改行しない） */
+.phrase {
+  display: inline-block;
 }
 #root {
   min-height: 100dvh;
@@ -329,40 +356,50 @@ button {
   background: #fff;
 }
 
-/* ---- 数字キー ---- */
+/* ---- 数字キー（4れつ・高さは画面の高さに合わせて 44〜58px） ---- */
 .pad {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   margin: 0 auto;
 }
 .pad button {
-  min-height: 56px;
-  border-radius: 16px;
+  min-height: clamp(44px, 7.2dvh, 58px);
+  border-radius: 14px;
   border: 2px solid var(--line);
   background: #fff;
   font-family: var(--num-font);
-  font-size: 1.6rem;
+  font-size: clamp(1.35rem, 3.6dvh, 1.7rem);
   font-weight: 700;
   box-shadow: 0 2px 0 var(--line);
+  padding: 0;
 }
 .pad button:active:not(:disabled) {
   transform: translateY(2px);
   box-shadow: none;
 }
 .pad .pad-clear {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: var(--font);
 }
+.pad .pad-zero {
+  grid-column: 1 / span 3;
+}
+.pad.no-submit .pad-zero {
+  grid-column: 1 / span 4;
+}
 .pad .pad-submit {
-  grid-column: span 3;
+  grid-column: 4;
+  grid-row: 3 / span 2;
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
   font-family: var(--font);
-  font-size: 1.2rem;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  padding: 4px;
   box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 70%, #000);
 }
 .pad .pad-submit:disabled {
@@ -671,4 +708,135 @@ html[data-motion='reduced'] *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
+}
+
+/* ---- 説明アニメ：式の数の意味 ---- */
+.eq-legend {
+  list-style: none;
+  margin: 0;
+  padding: 6px 12px 10px;
+  display: grid;
+  gap: 6px;
+}
+.eq-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: opacity 0.3s;
+}
+.eq-chip {
+  flex: none;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.eq-label {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+/* ---- タブ（横スクロールせずに全部見せる） ---- */
+.grid-tabs {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: 6px;
+}
+.grid-tabs .chip {
+  min-height: 46px;
+  padding: 6px 4px;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  text-align: center;
+}
+@media (min-width: 560px) {
+  .grid-tabs {
+    grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
+  }
+}
+
+/* ---- 操作ドック（画面下の 数字キー・こたえる・つぎへ） ---- */
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  margin: auto -16px calc(-24px - env(safe-area-inset-bottom)) -16px;
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom) + var(--vv-gap, 0px));
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 -6px 16px rgba(27, 40, 56, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dock:not(:has(button, input, svg)) {
+  display: none;
+}
+.dock-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dock-slot:empty {
+  display: none;
+}
+.dock-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.dock-footer .btn {
+  min-height: 46px;
+}
+.dock .btn.big {
+  min-height: 52px;
+}
+/* 判定やヒントを出したときに、ドックの下に隠れないように */
+.feedback,
+.hint-panel {
+  scroll-margin-bottom: calc(var(--dock-h, 0px) + 12px);
+  scroll-margin-top: 72px;
+}
+
+/* ---- 背の低い画面（ツールバーが出ている iPhone など）では余白をつめる ---- */
+@media (max-height: 700px) {
+  .screen {
+    gap: 8px;
+    padding-top: 6px;
+  }
+  .topbar {
+    min-height: 48px;
+    padding-top: calc(4px + env(safe-area-inset-top));
+    padding-bottom: 4px;
+    margin-top: -6px;
+  }
+  .card {
+    padding: 10px 12px;
+  }
+  .big-expr {
+    font-size: clamp(2rem, 9vw, 3rem);
+    margin: 0;
+  }
+  .answer-box {
+    min-height: 54px;
+    font-size: 1.9rem;
+  }
+  .feedback {
+    min-height: 40px;
+    padding: 6px 12px;
+  }
+  .pad {
+    gap: 5px;
+  }
+  .dock {
+    padding-top: 6px;
+    gap: 6px;
+  }
 }

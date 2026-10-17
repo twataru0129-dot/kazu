@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../../app/router';
 import { play } from '../../audio/sfx';
 import { NumberPad } from '../../components/NumberPad';
+import { DockLayout, InDock } from '../../components/Dock';
 import { Apple, Plate, TimelinePlayer } from '../../components/TimelinePlayer';
 import { AnswerBox, Feedback, SoundToggle, TopBar } from '../../components/ui';
 import { MODES } from '../../config/theme';
@@ -183,18 +184,24 @@ function PracticePanel() {
           {!done && <NumberPad value={value} onChange={setValue} onSubmit={() => answer(parseAnswer(value))} maxDigits={3} />}
         </>
       ) : (
-        <div className="stack">
-          {q.options.map((o) => (
-            <button key={o} type="button" className="btn big num" onClick={() => answer(o)} disabled={done}>
-              {o}
-            </button>
-          ))}
-        </div>
+        !done && (
+          <InDock>
+            <div className="stack" style={{ gap: 6 }}>
+              {q.options.map((o) => (
+                <button key={o} type="button" className="btn big num" onClick={() => answer(o)}>
+                  {o}
+                </button>
+              ))}
+            </div>
+          </InDock>
+        )
       )}
       {done && (
-        <button type="button" className="btn primary big" onClick={next}>
-          つぎの もんだい →
-        </button>
+        <InDock>
+          <button type="button" className="btn primary big block" onClick={next}>
+            つぎの もんだい →
+          </button>
+        </InDock>
       )}
     </div>
   );
@@ -267,11 +274,13 @@ export function MulLesson() {
         value={tab}
         onChange={setTab}
       />
+      <DockLayout>
       {tab === 'watch' && <TimelinePlayer scenes={MUL_SCENES} title="かけざんって なに？" />}
       {tab === 'move' && <MovePanel />}
       {tab === 'add' && <AddPanel />}
       {tab === 'practice' && <PracticePanel />}
       {tab === 'table' && <TablePanel />}
+      </DockLayout>
     </main>
   );
 }

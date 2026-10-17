@@ -4,6 +4,7 @@ import { parseAnswer } from '../../domain/input';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 export function DecomposeView({ puzzle: p, submit, found, status }: GameViewProps<DecomposePuzzle, DecomposeAnswer>) {
   const [vals, setVals] = useState<string[]>(() => Array(p.parts).fill(''));
@@ -45,6 +46,7 @@ export function DecomposeView({ puzzle: p, submit, found, status }: GameViewProp
         </div>
       </div>
       {status}
+      <InDock>
       <div className="row center">
         <button type="button" className="btn" onClick={() => setFocus((focus + p.parts - 1) % p.parts)} aria-label="まえの はこ">
           ◀
@@ -54,6 +56,7 @@ export function DecomposeView({ puzzle: p, submit, found, status }: GameViewProp
           ▶
         </button>
       </div>
+      </InDock>
       <NumberPad
         value={vals[focus]}
         onChange={(v) => setVals((old) => old.map((x, i) => (i === focus ? v : x)))}

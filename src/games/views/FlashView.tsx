@@ -5,6 +5,7 @@ import { play } from '../../audio/sfx';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 const SPEED_LABEL: Record<FlashSpeed, string> = { slow: 'ゆっくり', normal: 'ふつう', fast: 'はやい' };
 
@@ -62,21 +63,25 @@ export function FlashView({ puzzle: p, submit, solved, status }: GameViewProps<F
         </div>
       )}
       {phase === 'ready' && (
-        <button type="button" className="btn primary big" onClick={start}>
-          スタート
-        </button>
+        <InDock>
+          <button type="button" className="btn primary big" onClick={start}>
+            スタート
+          </button>
+        </InDock>
       )}
       {phase === 'answer' && (
         <>
           {status}
-          <div className="row center">
-            <AnswerBox value={value} active={!solved} label="こたえ" />
-            {!solved && (
-              <button type="button" className="btn" onClick={start}>
-                もういちど みる
-              </button>
-            )}
-          </div>
+          <InDock>
+            <div className="row center">
+              <AnswerBox value={value} active={!solved} label="こたえ" />
+              {!solved && (
+                <button type="button" className="btn" onClick={start}>
+                  もういちど みる
+                </button>
+              )}
+            </div>
+          </InDock>
           {solved && <div className="center-text muted num">{p.numbers.join(' + ')}</div>}
           <NumberPad value={value} onChange={setValue} onSubmit={() => submit(parseAnswer(value))} disabled={solved} maxDigits={4} />
           <div className="center-text small muted">みた かいすう：{plays}</div>

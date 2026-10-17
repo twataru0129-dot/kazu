@@ -4,6 +4,7 @@ import { navigate } from '../app/router';
 import { play } from '../audio/sfx';
 import { speak } from '../audio/speech';
 import { GameIcon } from '../components/Icons';
+import { DockLayout } from '../components/Dock';
 import { Feedback, HintButton, HintPanel, ProgressDots, SoundToggle, SpeakButton, TopBar } from '../components/ui';
 import { createRng, newId, randomSeed } from '../domain/random';
 import { GAME_BY_ID, SET_SIZE, type GameMeta } from '../domain/games/registry';
@@ -45,6 +46,11 @@ export function GameScreen({ gameId }: { gameId: GameId }) {
   const [resume, setResume] = useState<{ draft: Draft; session: Session } | null>(null);
   const [setStats, setSetStats] = useState({ solved: 0, total: 0 });
   const [playKey, setPlayKey] = useState(0);
+
+  // 画面が切りかわったら いちばん上（問題）から見せる
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [stage, playKey]);
 
   useEffect(() => {
     if (!meta.resumable) return;
@@ -314,6 +320,7 @@ function GamePlayer({
   };
 
   const resetRound = () => {
+    window.scrollTo(0, 0);
     const nr = newRound();
     setRound(nr);
     roundRef.current = nr;
@@ -377,6 +384,29 @@ function GamePlayer({
         }
       />
       {total > 1 && <ProgressDots total={total} done={index + (round.solved ? 1 : 0)} current={index} />}
+      <DockLayout
+        footer={
+          round.solved && !explore ? (
+            // 正解したら「つぎへ」を いちばん 押しやすい 場所に 大きく出す
+            <button type="button" className="btn good big block" onClick={() => goNext(false)}>
+              {index + 1 >= total ? 'おわり' : 'つぎへ'} →
+            </button>
+          ) : (
+            <>
+              <HintButton level={round.hints} onClick={takeHint} disabled={round.solved && !explore} />
+              {round.solved ? (
+                <button type="button" className="btn good big" onClick={() => goNext(false)}>
+                  {index + 1 >= total ? 'おわり' : 'つぎへ'} →
+                </button>
+              ) : (
+                <button type="button" className="btn ghost" onClick={() => goNext(true)}>
+                  ちがう もんだいに する
+                </button>
+              )}
+            </>
+          )
+        }
+      >
       <View
         key={round.attemptId}
         puzzle={round.puzzle}
@@ -390,19 +420,8 @@ function GamePlayer({
         reportProgress={setProgress}
         status={status}
       />
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <HintButton level={round.hints} onClick={takeHint} disabled={round.solved && !explore} />
-        {round.solved ? (
-          <button type="button" className="btn good big" onClick={() => goNext(false)}>
-            {index + 1 >= total ? 'おわり' : 'つぎへ'} →
-          </button>
-        ) : (
-          <button type="button" className="btn ghost" onClick={() => goNext(true)}>
-            ちがう もんだいに する
-          </button>
-        )}
-      </div>
       {explore && round.solved && <p className="small muted center-text">ほかの こたえも さがせるよ。「つぎへ」で つぎの もんだい。</p>}
+      </DockLayout>
     </main>
   );
 }

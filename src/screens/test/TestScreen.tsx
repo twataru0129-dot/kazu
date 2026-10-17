@@ -3,6 +3,7 @@ import { useProfile } from '../../app/AppContext';
 import { navigate } from '../../app/router';
 import { play } from '../../audio/sfx';
 import { NumberPad } from '../../components/NumberPad';
+import { DockLayout } from '../../components/Dock';
 import { AnswerBox, Confirm, Modal, ProgressDots, SoundToggle, TopBar } from '../../components/ui';
 import { MODES } from '../../config/theme';
 import { explain } from '../../domain/arithmetic/explain';
@@ -383,13 +384,19 @@ function TestRun({ session: initialSession, draft: initial, onFinished, onLeave 
           ほぞん できませんでした。もういちど「けってい」を おしてください。
         </div>
       )}
-      <NumberPad value={value} onChange={setValue} onSubmit={() => void confirm(false)} submitLabel="けってい" maxDigits={5} disabled={paused} />
-      <div className="row center">
-        <button type="button" className="btn ghost" onClick={() => void confirm(true)} disabled={paused}>
-          スキップ
-        </button>
-      </div>
       <p className="center-text small muted">「けってい」を おすまでは なおせるよ。</p>
+      <DockLayout
+        footer={
+          <>
+            <span className="small muted">のこり {draft.problems.length - draft.index}もん</span>
+            <button type="button" className="btn ghost" onClick={() => void confirm(true)} disabled={paused}>
+              スキップ
+            </button>
+          </>
+        }
+      >
+        <NumberPad value={value} onChange={setValue} onSubmit={() => void confirm(false)} submitLabel="けってい" maxDigits={5} disabled={paused} />
+      </DockLayout>
       {paused && !leaving && (
         <Modal title="いちじ ていし ちゅう" onClose={resume}>
           <p>じかんは とまっているよ。</p>

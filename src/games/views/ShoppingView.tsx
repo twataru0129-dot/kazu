@@ -5,6 +5,7 @@ import { play } from '../../audio/sfx';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox, Feedback } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 import { ItemIcon } from './ItemIcon';
 
 export function ShoppingView({ puzzle: p, submit, solved, status }: GameViewProps<ShoppingPuzzle, ShoppingAnswer>) {
@@ -74,9 +75,11 @@ export function ShoppingView({ puzzle: p, submit, solved, status }: GameViewProp
           </div>
           {status}
           {pickMsg && <Feedback kind="try">{pickMsg}</Feedback>}
-          <button type="button" className="btn primary big" onClick={toRegister} disabled={inBasket.length === 0}>
-            レジへ すすむ
-          </button>
+          <InDock>
+            <button type="button" className="btn primary big" onClick={toRegister} disabled={inBasket.length === 0}>
+              レジへ すすむ
+            </button>
+          </InDock>
         </>
       ) : (
         <>
@@ -93,11 +96,13 @@ export function ShoppingView({ puzzle: p, submit, solved, status }: GameViewProp
             ))}
           </div>
           {status}
-          <div className="row center">
-            <span style={{ fontWeight: 700 }}>{p.mode === 'change' ? 'おつり' : 'ごうけい'}</span>
-            <AnswerBox value={value} active={!solved} label="きんがく" />
-            <span style={{ fontWeight: 700 }}>えん</span>
-          </div>
+          <InDock>
+            <div className="row center">
+              <span style={{ fontWeight: 700 }}>{p.mode === 'change' ? 'おつり' : 'ごうけい'}</span>
+              <AnswerBox value={value} active={!solved} label="きんがく" />
+              <span style={{ fontWeight: 700 }}>えん</span>
+            </div>
+          </InDock>
           <NumberPad value={value} onChange={setValue} onSubmit={() => submit({ basket, value: parseAnswer(value) })} disabled={solved} maxDigits={5} />
           {!solved && (
             <button type="button" className="btn ghost" onClick={() => setStage('pick')}>

@@ -3,6 +3,7 @@ import { back } from '../app/router';
 import { IconBack, IconHint, IconSound, IconSpeak } from './Icons';
 import { useApp } from '../app/AppContext';
 import { speak, speechAvailable } from '../audio/speech';
+import { keepMath } from '../domain/text';
 
 export function TopBar({ title, onBack, right, backLabel = 'もどる' }: { title: ReactNode; onBack?: () => void; right?: ReactNode; backLabel?: string }) {
   return (
@@ -49,14 +50,27 @@ export function HintButton({ level, max = 3, onClick, disabled }: { level: numbe
   );
 }
 
+/** 下の操作ドックに隠れないよう、出したときに見える位置まで動かす */
+function useRevealOnChange<T extends HTMLElement>(dep: unknown) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof el.scrollIntoView !== 'function') return;
+    const reduce = document.documentElement.dataset.motion === 'reduced' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }, [dep]);
+  return ref;
+}
+
 export function HintPanel({ hints, level }: { hints: readonly string[]; level: number }) {
+  const ref = useRevealOnChange<HTMLDivElement>(level);
   if (level <= 0) return null;
   return (
-    <div className="hint-panel" aria-live="polite">
+    <div className="hint-panel" aria-live="polite" ref={ref}>
       <strong>ヒント</strong>
       <ol>
         {hints.slice(0, level).map((h, i) => (
-          <li key={i}>{h}</li>
+          <li key={i}>{keepMath(h)}</li>
         ))}
       </ol>
     </div>
@@ -64,10 +78,11 @@ export function HintPanel({ hints, level }: { hints: readonly string[]; level: n
 }
 
 export function Feedback({ kind, children }: { kind: 'good' | 'try'; children: ReactNode }) {
+  const ref = useRevealOnChange<HTMLDivElement>(null);
   return (
-    <div className={`feedback ${kind} ${kind === 'good' ? 'pop' : 'shake-soft'}`} role="status" aria-live="polite">
+    <div ref={ref} className={`feedback ${kind} ${kind === 'good' ? 'pop' : 'shake-soft'}`} role="status" aria-live="polite">
       {kind === 'good' ? '◎ ' : ''}
-      {children}
+      {typeof children === 'string' ? keepMath(children) : children}
     </div>
   );
 }

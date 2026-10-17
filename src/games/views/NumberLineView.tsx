@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { isLabeled, ratioOf, snapRatio, tickCount, tickValue, type NumberLinePuzzle } from '../../domain/games/numberline';
 import { play } from '../../audio/sfx';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 export function NumberLineView({ puzzle: p, submit, solved, status }: GameViewProps<NumberLinePuzzle, number | null>) {
   const [marker, setMarker] = useState<number | null>(null);
@@ -98,7 +99,8 @@ export function NumberLineView({ puzzle: p, submit, solved, status }: GameViewPr
         </div>
       </div>
       {status}
-      <div className="row center">
+      <InDock>
+      <div className="row center" style={{ flexWrap: 'nowrap' }}>
         <button type="button" className="btn big" onClick={() => stepBy(-1)} disabled={solved} aria-label="ひだりへ 1めもり">
           ◀
         </button>
@@ -109,6 +111,7 @@ export function NumberLineView({ puzzle: p, submit, solved, status }: GameViewPr
           ▶
         </button>
       </div>
+      </InDock>
     </section>
   );
 }

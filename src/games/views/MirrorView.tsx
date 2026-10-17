@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { emptyRight, mismatches, type MirrorAnswer, type MirrorPuzzle } from '../../domain/games/mirror';
 import { play } from '../../audio/sfx';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 /** 色だけに頼らないよう、色ごとに模様も変える */
 export const PAINT = [
@@ -88,7 +89,8 @@ export function MirrorView({ puzzle: p, submit, solved, status, draft, saveDraft
         </div>
       </div>
       {status}
-      <div className="row center">
+      <InDock>
+      <div className="row center" style={{ flexWrap: 'nowrap' }}>
         <button
           type="button"
           className="btn"
@@ -105,6 +107,7 @@ export function MirrorView({ puzzle: p, submit, solved, status, draft, saveDraft
           こたえあわせ
         </button>
       </div>
+      </InDock>
     </section>
   );
 }

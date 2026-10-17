@@ -35,12 +35,10 @@ function appMeta(): Plugin {
             background_color: appConfig.backgroundColor,
             theme_color: appConfig.themeColor,
             lang: 'ja',
-            icons: [
-              { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-              { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-              { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-              { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml' },
-            ],
+            // 採用デザインの PNG（角の外側が白いので maskable には使わない）
+            icons: appConfig.icons.files
+              .filter((f) => f.size !== 180)
+              .map((f) => ({ src: f.public, sizes: `${f.size}x${f.size}`, type: 'image/png', purpose: 'any' })),
           },
           null,
           2,
@@ -57,9 +55,12 @@ function serviceWorker(): Plugin {
     apply: 'build',
     generateBundle(_options, bundle) {
       const files = Object.keys(bundle).filter((f) => !f.endsWith('.map'));
-      const publicFiles = ['icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+      const publicFiles = appConfig.icons.files.map((f) => f.public);
       const precache = ['./', ...[...files, ...publicFiles].map((f) => `./${f}`)];
-      const version = createHash('sha256').update(precache.join('|')).digest('hex').slice(0, 12);
+      // アイコンの中身が変わったときも版が変わるように、ファイルの内容もハッシュに含める
+      const hash = createHash('sha256').update(precache.join('|'));
+      for (const f of publicFiles) hash.update(readFileSync(new URL(`./public/${f}`, import.meta.url)));
+      const version = hash.digest('hex').slice(0, 12);
       const template = readFileSync(new URL('./scripts/sw.template.js', import.meta.url), 'utf8');
       this.emitFile({
         type: 'asset',

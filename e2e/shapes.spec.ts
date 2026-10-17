@@ -37,7 +37,8 @@ async function solve(page: Page, useDrag: boolean) {
   const p = await readPuzzle(page);
   const toClient = async (cx: number, cy: number) => {
     // ボタン操作でページがスクロールするので、毎回 盤面の位置を取り直す
-    await board.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    // 盤面は ドックの上に 収まるので、いちばん上に スクロールしてから 位置を取る
+    await page.evaluate(() => window.scrollTo(0, 0));
     const box = (await board.boundingBox())!;
     return { x: box.x + ((cx + 0.15) / (p.width + 0.3)) * box.width, y: box.y + ((cy + 0.15) / (p.height + 0.3)) * box.height };
   };

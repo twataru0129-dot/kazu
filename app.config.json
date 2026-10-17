@@ -5,5 +5,25 @@
   "themeColor": "#3a8fd6",
   "backgroundColor": "#f4faff",
   "backupFormat": "suuji-app-backup",
-  "dbName": "kazu-asobi"
+  "dbName": "kazu-asobi",
+  "icons": {
+    "_comment": "アプリアイコン。原画は assets/icon/ にあり、node scripts/make-icons.mjs で public/icons/ へコピーする",
+    "files": [
+      {
+        "source": "assets/icon/kazu_app_icon_192.png",
+        "public": "icons/app-icon-192.png",
+        "size": 192
+      },
+      {
+        "source": "assets/icon/kazu_app_icon_512.png",
+        "public": "icons/app-icon-512.png",
+        "size": 512
+      },
+      {
+        "source": "assets/icon/kazu_app_icon_180.png",
+        "public": "icons/app-icon-180.png",
+        "size": 180
+      }
+    ]
+  }
 }

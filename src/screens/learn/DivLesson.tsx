@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { navigate } from '../../app/router';
 import { play } from '../../audio/sfx';
 import { NumberPad } from '../../components/NumberPad';
+import { DockLayout, InDock } from '../../components/Dock';
 import { Bag, Candy, Kid, TimelinePlayer } from '../../components/TimelinePlayer';
 import { AnswerBox, Feedback, SoundToggle, TopBar } from '../../components/ui';
 import { MODES } from '../../config/theme';
@@ -224,9 +225,11 @@ function PracticePanel() {
       {!done ? (
         <NumberPad value={value} onChange={setValue} onSubmit={answer} maxDigits={3} />
       ) : (
-        <button type="button" className="btn primary big" onClick={next}>
-          つぎの もんだい →
-        </button>
+        <InDock>
+          <button type="button" className="btn primary big block" onClick={next}>
+            つぎの もんだい →
+          </button>
+        </InDock>
       )}
     </div>
   );
@@ -247,6 +250,7 @@ export function DivLesson() {
         value={tab}
         onChange={setTab}
       />
+      <DockLayout>
       {tab === 'watch' && <TimelinePlayer scenes={DIV_SCENES} title="わりざんって なに？" />}
       {tab === 'share' && <SharePanel />}
       {tab === 'group' && <GroupPanel />}
@@ -254,6 +258,7 @@ export function DivLesson() {
       <p className="small muted" style={{ margin: 0 }}>
         いまは あまりの ない わりざん だけ だよ。
       </p>
+      </DockLayout>
     </main>
   );
 }
