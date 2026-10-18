@@ -4,6 +4,7 @@ import { onSaveResult, Repo } from '../persistence/repo';
 import type { Profile, UserSettings } from '../persistence/types';
 import { setSoundEnabled } from '../audio/sfx';
 import { setSpeechEnabled } from '../audio/speech';
+import { setSaveWaiter } from './pwa';
 
 const LAST_PROFILE_KEY = 'kazu.lastProfileId';
 /** 同じタブでのリロード時だけ、遊んでいたプロフィールを復元する（新しく開いたときは選択画面） */
@@ -82,6 +83,10 @@ export function AppProvider({ children, repo: injected }: { children: ReactNode;
     const ps = await repo.listProfiles();
     setProfiles(ps);
     return ps;
+  }, [repo]);
+
+  useEffect(() => {
+    if (repo) setSaveWaiter(() => repo.whenIdle());
   }, [repo]);
 
   useEffect(() => {

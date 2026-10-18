@@ -1,8 +1,13 @@
-# GitHub Pages への公開（手動実行のみ）。
+# GitHub Pages への公開。
+# - main への push（PR のマージを含む）で自動実行。PR を作っただけでは公開しない。
+# - Actions 画面の「Run workflow」から手動でも実行できる。
+# 型チェック・lint・テスト・ビルドがすべて成功したときだけ公開する。
 # 使う前に リポジトリの Settings → Pages → Source を「GitHub Actions」にしてください。
 name: Deploy to GitHub Pages
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,6 +15,7 @@ permissions:
   pages: write
   id-token: write
 
+# 公開は1つずつ順番に行う（途中で止めない）
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -24,8 +30,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
       # base は既定で相対パス（./）なので、リポジトリ名に関係なく動きます。
+      # アプリの版には commit の先頭7桁が入ります（おとなのメニュー → ほぞんについて で確認できます）。
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

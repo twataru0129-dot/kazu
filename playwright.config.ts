@@ -15,13 +15,23 @@ export default defineConfig({
     launchOptions: executablePath ? { executablePath } : undefined,
   },
   projects: [
-    { name: 'phone', use: { ...devices['Pixel 5'], viewport: { width: 320, height: 640 }, acceptDownloads: true } },
+    // PWA の自動更新（古い版→新しい版の公開）を再現するテスト。専用サーバーで /kazu/ 配下に配信する
+    { name: 'pwa-update', use: { ...devices['Pixel 5'], baseURL: 'http://localhost:4174/kazu/' }, testMatch: /pwa-update\.spec\.ts/ },
+    { name: 'phone', use: { ...devices['Pixel 5'], viewport: { width: 320, height: 640 }, acceptDownloads: true }, testIgnore: /pwa-update\.spec\.ts/ },
     { name: 'desktop', use: { ...devices['Desktop Chrome'], acceptDownloads: true }, testMatch: /flow\.spec\.ts/ },
   ],
-  webServer: {
-    command: 'npm run build && npx vite preview --port 4173 --strictPort',
-    url: 'http://localhost:4173/',
-    reuseExistingServer: true,
-    timeout: 180_000,
-  },
+  webServer: [
+    {
+      command: 'npm run build && npx vite preview --port 4173 --strictPort',
+      url: 'http://localhost:4173/',
+      reuseExistingServer: true,
+      timeout: 180_000,
+    },
+    {
+      command: 'node e2e/support/pwa-server.mjs',
+      url: 'http://localhost:4174/kazu/',
+      reuseExistingServer: false,
+      timeout: 180_000,
+    },
+  ],
 });

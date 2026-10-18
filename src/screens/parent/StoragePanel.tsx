@@ -8,6 +8,9 @@ export function StoragePanel() {
     <div className="card stack">
       <h2>記録の保存について</h2>
       <p style={{ margin: 0 }}>
+        アプリの版：<strong data-testid="app-version">{__APP_VERSION__}</strong>（新しい版は、ホームなどの画面にいるときに自動で切り替わります。ゲームやテストの途中では切り替えません）
+      </p>
+      <p style={{ margin: 0 }}>
         現在の保存先：<strong>{app.persistent ? 'このブラウザ内（IndexedDB）' : '一時的なメモリ（ページを閉じると消えます）'}</strong>
       </p>
       <ul style={{ margin: 0, paddingLeft: '1.2em', lineHeight: 1.7 }}>

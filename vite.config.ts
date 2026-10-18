@@ -8,6 +8,10 @@ import appConfig from './app.config.json';
 // base は既定で相対パス（'./'）。ハッシュルーティングなので GitHub Pages の
 // どのリポジトリ配下でもそのまま動く。絶対パスにしたい場合は BASE_PATH を指定。
 const base = process.env.BASE_PATH || './';
+// アプリの版：package.json の version と、ビルドごとのID（GitHub Actions では commit の先頭7桁）
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+const buildId = process.env.BUILD_ID || (process.env.GITHUB_SHA ? process.env.GITHUB_SHA.slice(0, 7) : new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12));
+const APP_VERSION = `${pkg.version}+${buildId}`;
 
 /** index.html と manifest にアプリ名などを差し込む */
 function appMeta(): Plugin {
@@ -75,6 +79,7 @@ function serviceWorker(): Plugin {
 
 export default defineConfig({
   base,
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   plugins: [react(), appMeta(), serviceWorker()],
   build: { sourcemap: false, target: 'es2020' },
   test: {
