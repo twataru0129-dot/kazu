@@ -45,7 +45,7 @@ export function ParentScreen() {
           <div className="card stack center-text">
             <p style={{ margin: 0 }}>ここは おうちの ひと むけの ページです。</p>
             <p className="small muted" style={{ margin: 0 }}>
-              まちがって ひらかないための かくにんです（パスワードによる ほごでは ありません。「あそぶ じかん」で あんしょうばんごうを きめると、ばんごうで まもれます）。
+              子どもが間違って開かないための確認です（パスワードによる保護ではありません。「設定」の「遊ぶ時間」で暗証番号を設定すると、番号で保護できます）。
             </p>
             <HoldButton className="btn primary big" onDone={() => setUnlocked(true)}>
               ボタンを ながおしして ひらく
@@ -60,11 +60,11 @@ export function ParentScreen() {
       <div className="grid-tabs" role="tablist" style={{ ['--n' as string]: 5, ['--cols' as string]: 3 }}>
         {(
           [
-            ['records', 'きろく'],
+            ['records', '記録'],
             ['profiles', 'プロフィール'],
-            ['settings', 'せってい'],
+            ['settings', '設定'],
             ['backup', 'バックアップ'],
-            ['storage', 'ほぞんについて'],
+            ['storage', '保存について'],
           ] as [Tab, string][]
         ).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className="chip" onClick={() => setTab(k)}>

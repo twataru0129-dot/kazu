@@ -22,15 +22,15 @@ export function SettingsPanel() {
   const prefs = Object.entries(s.preferredDifficultyByGame);
   return (
     <div className="card stack">
-      <h2>「{app.profile.nickname}」の せってい</h2>
-      {row('soundOn', 'こうかおん', 'ただしい ときの みじかい おと など')}
-      {row('speechOn', 'よみあげ', speechAvailable() ? 'せつめいや ヒントを よみあげます（じまくは いつも でます）' : 'この ブラウザでは よみあげが つかえません（じまくで つかえます）')}
-      {row('reducedMotion', 'うごきを へらす', 'アニメーションを ひかえめに します（たんまつの「視差効果を減らす」設定も 反映します）')}
-      {row('largeText', 'もじを おおきく')}
+      <h2>「{app.profile.nickname}」の設定</h2>
+      {row('soundOn', '効果音', '正解したときの短い音など')}
+      {row('speechOn', '読み上げ', speechAvailable() ? '説明やヒントを読み上げます（字幕は常に表示されます）' : 'このブラウザでは読み上げが使えません（字幕で利用できます）')}
+      {row('reducedMotion', '動きを減らす', 'アニメーションを控えめにします（端末の「視差効果を減らす」設定も反映します）')}
+      {row('largeText', '文字を大きく')}
       <div>
-        <strong>ゲームの まえの むずかしさ</strong>
+        <strong>ゲームごとの前回の難しさ</strong>
         <p className="small muted" style={{ margin: '2px 0' }}>
-          {prefs.length ? prefs.map(([g, d]) => `${isGameId(g) ? GAME_BY_ID[g].title : g}：${DIFFICULTY_LABEL[d]}`).join('、') : 'まだ ありません'}
+          {prefs.length ? prefs.map(([g, d]) => `${isGameId(g) ? GAME_BY_ID[g].title : g}：${DIFFICULTY_LABEL[d]}`).join('、') : 'まだありません'}
         </p>
         {prefs.length > 0 && (
           <button type="button" className="btn small" onClick={() => void app.updateSettings({ preferredDifficultyByGame: {} })}>
