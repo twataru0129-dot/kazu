@@ -1,6 +1,7 @@
 import { newId } from '../domain/random';
 import type { Backend } from './db';
-import { defaultSettings, type AvatarId, type Profile, type Session, type StoredAttempt, type UserSettings } from './types';
+import { defaultParental, defaultSettings, type AvatarId, type ParentalConfig, type Profile, type Session, type StoredAttempt, type UserSettings } from './types';
+import { initialPlaytime, type PlaytimeState } from '../domain/parental/playtime';
 
 /** 保存失敗を画面に知らせるための通知 */
 type SaveListener = (ok: boolean, error?: unknown) => void;
@@ -114,6 +115,37 @@ export class Repo {
         for (const a of attempts) await tx.delete('attempts', a.id);
         await tx.delete('settings', id);
         await tx.delete('profiles', id);
+      }),
+    );
+  }
+
+  // ---- 保護者の設定・あそぶ じかん（アプリ全体で1組。meta ストア） ----
+  async getParental(): Promise<ParentalConfig> {
+    const r = await this.backend.run(['meta'], 'readonly', (tx) => tx.get<ParentalConfig & { key: string }>('meta', 'parental'));
+    if (!r) return defaultParental();
+    const { key: _key, ...rest } = r;
+    return { ...defaultParental(), ...rest };
+  }
+
+  saveParental(c: ParentalConfig): Promise<void> {
+    return this.write(() => this.backend.run(['meta'], 'readwrite', (tx) => tx.put('meta', { key: 'parental', ...c })));
+  }
+
+  async getPlaytime(): Promise<PlaytimeState> {
+    const r = await this.backend.run(['meta'], 'readonly', (tx) => tx.get<PlaytimeState & { key: string }>('meta', 'playtime'));
+    if (!r) return initialPlaytime();
+    return { usedMs: Math.max(0, Number(r.usedMs) || 0), phase: r.phase === 'running' || r.phase === 'locked' ? r.phase : 'waiting', warned: !!r.warned };
+  }
+
+  /** 読んで・変えて・書くを1つのトランザクションで（複数のタブでも数え直しが混ざらない） */
+  updatePlaytime<R>(fn: (s: PlaytimeState) => { state: PlaytimeState; result: R }): Promise<{ state: PlaytimeState; result: R }> {
+    return this.write(() =>
+      this.backend.run(['meta'], 'readwrite', async (tx) => {
+        const r = await tx.get<PlaytimeState & { key: string }>('meta', 'playtime');
+        const cur: PlaytimeState = r ? { usedMs: Math.max(0, Number(r.usedMs) || 0), phase: r.phase, warned: !!r.warned } : initialPlaytime();
+        const out = fn(cur);
+        await tx.put('meta', { key: 'playtime', ...out.state });
+        return out;
       }),
     );
   }

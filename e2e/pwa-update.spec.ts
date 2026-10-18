@@ -153,3 +153,31 @@ test('オフラインでは今の版で遊べて、オンラインに戻ると�
   await expect.poll(() => version(page), { timeout: 30_000 }).toContain('e2e-new');
   expect(await readStore(page)).toEqual(before);
 });
+
+test('時間切れのロック中に新しい版が来ても、ロックは解けない（オフライン→オンラインでも）', async ({ page, context }) => {
+  await setupOld(page);
+  // 保護者の設定とロック状態を端末に保存（UI で設定したのと同じ形）
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const open = indexedDB.open('kazu-asobi');
+        open.onsuccess = () => {
+          const tx = open.result.transaction('meta', 'readwrite');
+          tx.objectStore('meta').put({ key: 'parental', enabled: true, limitMinutes: 5, pin: { algo: 'PBKDF2-SHA256', iterations: 1000, salt: 'AAAAAAAAAAAAAAAAAAAAAA==', hash: 'x' }, failures: 0, retryAt: 0 });
+          tx.objectStore('meta').put({ key: 'playtime', usedMs: 5 * 60_000, phase: 'locked', warned: true });
+          tx.oncomplete = () => resolve();
+        };
+      }),
+  );
+  await page.reload();
+  await expect(page.getByTestId('lock-screen')).toBeVisible();
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByTestId('lock-screen')).toBeVisible();
+  await publish(page, 'new');
+  await context.setOffline(false);
+  await simulateResume(page);
+  await expect.poll(() => version(page), { timeout: 30_000 }).toContain('e2e-new');
+  await expect(page.getByTestId('lock-screen')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'モード' })).toHaveCount(0);
+});

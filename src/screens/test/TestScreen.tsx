@@ -295,6 +295,14 @@ function TestRun({ session: initialSession, draft: initial, onFinished, onLeave 
   const persistRef = useRef(persist);
   persistRef.current = persist;
 
+  // 画面が閉じられるとき（時間切れのロック・アプリ更新・戻る など）に、途中の状態を保存する
+  useEffect(
+    () => () => {
+      if (sessionRef.current.status === 'inProgress') void persistRef.current(draftRef.current).catch(() => undefined);
+    },
+    [],
+  );
+
   const p = draft.problems[draft.index];
 
   const confirm = async (skip: boolean) => {
@@ -423,7 +431,8 @@ function TestRun({ session: initialSession, draft: initial, onFinished, onLeave 
               type="button"
               className="btn danger"
               onClick={async () => {
-                await repo.saveSession({ ...sessionRef.current, status: 'abandoned', activeDraft: undefined }).catch(() => undefined);
+                sessionRef.current = { ...sessionRef.current, status: 'abandoned', activeDraft: undefined };
+                await repo.saveSession(sessionRef.current).catch(() => undefined);
                 onLeave();
               }}
             >

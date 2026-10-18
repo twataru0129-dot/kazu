@@ -143,14 +143,21 @@ export function Confirm({
   );
 }
 
-/** 長押しで実行するボタン（おとなメニューの誤操作防止用。認証ではない） */
+/**
+ * 長押しで実行するボタン（おとなメニューの誤操作防止用。認証ではない）。
+ * iPhone Safari で長押し中に文字選択・「コピー」のメニューが出ないよう、このボタンの中だけ
+ * user-select / -webkit-touch-callout を止め（CSS .hold-btn）、selectstart・dragstart・contextmenu を抑える。
+ * 指が少し動いても（16px まで）止めない。タッチ・マウス・キーボード（Enter / Space を押し続ける）で使える。
+ */
 export function HoldButton({ ms = 1200, onDone, children, className = 'btn' }: { ms?: number; onDone(): void; children: ReactNode; className?: string }) {
   const [progress, setProgress] = useState(0);
   const timer = useRef<number | null>(null);
   const start = useRef(0);
+  const origin = useRef<{ x: number; y: number } | null>(null);
   const stop = () => {
     if (timer.current) cancelAnimationFrame(timer.current);
     timer.current = null;
+    origin.current = null;
     setProgress(0);
   };
   const tick = () => {
@@ -161,29 +168,43 @@ export function HoldButton({ ms = 1200, onDone, children, className = 'btn' }: {
       onDone();
     } else timer.current = requestAnimationFrame(tick);
   };
+  const begin = () => {
+    if (timer.current) return;
+    start.current = performance.now();
+    timer.current = requestAnimationFrame(tick);
+  };
+  useEffect(() => () => {
+    if (timer.current) cancelAnimationFrame(timer.current);
+  }, []);
   return (
     <button
       type="button"
-      className={className}
+      className={`${className} hold-btn`}
       onPointerDown={(e) => {
-        e.preventDefault();
-        start.current = performance.now();
-        timer.current = requestAnimationFrame(tick);
+        if (e.button !== 0) return;
+        // ボタンの外に少しはみ出しても続けられるように
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        origin.current = { x: e.clientX, y: e.clientY };
+        begin();
+      }}
+      onPointerMove={(e) => {
+        if (!origin.current) return;
+        if (Math.hypot(e.clientX - origin.current.x, e.clientY - origin.current.y) > 16) stop();
       }}
       onPointerUp={stop}
-      onPointerLeave={stop}
       onPointerCancel={stop}
+      onLostPointerCapture={stop}
       onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+      onSelect={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          if (!timer.current) {
-            start.current = performance.now();
-            timer.current = requestAnimationFrame(tick);
-          }
+          begin();
         }
       }}
       onKeyUp={stop}
+      onBlur={stop}
       style={{ position: 'relative', overflow: 'hidden' }}
     >
       <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${progress * 100}%`, background: 'rgba(42,127,208,.2)' }} />

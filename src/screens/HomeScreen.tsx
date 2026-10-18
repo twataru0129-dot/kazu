@@ -1,6 +1,7 @@
 import { useApp, useProfile } from '../app/AppContext';
 import { navigate } from '../app/router';
 import { applyUpdate, useUpdateState } from '../app/pwa';
+import { useParental } from '../app/ParentalContext';
 import { Avatar } from '../components/Avatar';
 import { IconGear, IconSwitch, ModeIcon } from '../components/Icons';
 import { SoundToggle } from '../components/ui';
@@ -10,6 +11,7 @@ export function HomeScreen() {
   const { profile } = useProfile();
   const app = useApp();
   const update = useUpdateState();
+  const parental = useParental();
   return (
     <main className="screen">
       <header className="topbar">
@@ -66,7 +68,7 @@ export function HomeScreen() {
         })}
       </nav>
       <p className="center-text small muted" style={{ marginTop: 'auto' }}>
-        じかんの せいげんは ないよ。ゆっくり かんがえよう。
+        {parental.config.enabled ? 'おうちの ひとと きめた じかんまで あそぼうね。' : 'じかんの せいげんは ないよ。ゆっくり かんがえよう。'}
       </p>
     </main>
   );

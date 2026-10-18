@@ -174,3 +174,22 @@ describe('backup', () => {
     expect(other).toBeTruthy();
   });
 });
+
+describe('保護者の設定（アプリ全体）', () => {
+  it('初期は制限なし。プロフィール削除・バックアップ置換で消えず、バックアップには含まれない', async () => {
+    const repo = await openRepo();
+    expect((await repo.getParental()).enabled).toBe(false);
+    const a = await repo.createProfile('A', 'cat');
+    await repo.saveParental({ enabled: true, limitMinutes: 30, pin: { algo: 'PBKDF2-SHA256', iterations: 1, salt: 'c2FsdA==', hash: 'aGFzaA==' }, failures: 0, retryAt: 0 });
+    await repo.updatePlaytime(() => ({ state: { usedMs: 30 * 60_000, phase: 'locked', warned: true }, result: null }));
+    const bundle = await exportBundle(repo);
+    expect(JSON.stringify(bundle)).not.toMatch(/PBKDF2|playtime|parental|locked/);
+    await repo.deleteProfile(a.id);
+    const fresh = { ...bundle, profiles: [], attempts: [], sessions: [], settings: {} };
+    const pv = await previewImport(repo, JSON.stringify(fresh));
+    await applyImport(repo, pv.bundle!, 'replace');
+    // 復元・削除をしても ロックは解除されない
+    expect((await repo.getParental()).enabled).toBe(true);
+    expect((await repo.getPlaytime()).phase).toBe('locked');
+  });
+});

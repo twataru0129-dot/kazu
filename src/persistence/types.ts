@@ -84,3 +84,18 @@ export interface BackupBundle {
   attempts: StoredAttempt[];
   settings: Record<string, UserSettings>;
 }
+
+/**
+ * 保護者の設定（アプリ全体で1組。プロフィールの設定とは別）。
+ * IndexedDB の meta ストアに保存し、学習記録のバックアップには含めない。
+ */
+export interface ParentalConfig {
+  enabled: boolean;
+  limitMinutes: number;
+  pin: import('../domain/parental/pin').PinRecord | null;
+  /** 連続でまちがえた回数と、つぎに入力できる時刻（ミリ秒） */
+  failures: number;
+  retryAt: number;
+}
+
+export const defaultParental = (): ParentalConfig => ({ enabled: false, limitMinutes: 30, pin: null, failures: 0, retryAt: 0 });
