@@ -64,7 +64,7 @@ export const GAMES: GameMeta[] = [
   {
     id: 'make10', no: '03', title: '10をつくれ！', category: 'make', kind: 'set', resumable: false, input: 'カードを タップ',
     description: 'カードを ぜんぶ 1かいずつ つかって 10 を つくろう。',
-    difficultyNotes: { easy: '3まい・たしざん', normal: '3〜4まい・＋−', hard: '4〜5まい・＋−', challenge: '20や50を つくる' },
+    difficultyNotes: { easy: '3まい・＋と−', normal: '3〜4まい・＋−', hard: '4〜5まい・＋−', challenge: '20や50を つくる' },
     logic: make10,
   },
   {

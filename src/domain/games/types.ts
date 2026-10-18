@@ -37,7 +37,8 @@ export interface GameLogic<P, A> {
   id: GameId;
   generatorVersion: number;
   /** 乱数から候補を1つ作る（失敗してよい：null） */
-  create(rng: Rng, d: Difficulty): P | null;
+  /** recent：このセッションで直前に出した問題（新しいものが最後）。出題の偏りを防ぐのに使ってよい */
+  create(rng: Rng, d: Difficulty, recent?: readonly P[]): P | null;
   /** 出題条件を満たすか。満たせば null、だめなら理由 */
   validate(p: P, d: Difficulty): string | null;
   /** 検証済みの予備問題（生成に失敗したときに使う） */
@@ -62,9 +63,10 @@ export function generatePuzzle<P, A>(
   rng: Rng,
   d: Difficulty,
   avoidKeys: ReadonlySet<string> = new Set(),
+  recent: readonly P[] = [],
 ): Generated<P> {
   for (let i = 0; i < MAX_GENERATE_TRIES; i++) {
-    const p = logic.create(rng, d);
+    const p = logic.create(rng, d, recent);
     if (p && logic.validate(p, d) === null && !avoidKeys.has(logic.key(p))) return { puzzle: p, fromFallback: false };
   }
   const bank = logic.fallback(d).filter((p) => logic.validate(p, d) === null);

@@ -840,3 +840,29 @@ html[data-motion='reduced'] *::after {
     gap: 6px;
   }
 }
+
+/* ---- 10をつくれ！：タップで ＋／− を きりかえる きごう ---- */
+.op-toggle {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 6px;
+  border-radius: 14px;
+  border: 3px solid #f07a2a;
+  background: #fff4e8;
+  color: #1b2838;
+  font-size: 1.8rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 0 #e0a876;
+}
+.op-toggle[data-op='-'] {
+  border-color: #2a7fd0;
+  background: #e8f2fc;
+  box-shadow: 0 2px 0 #9cc3e8;
+}
+.op-toggle:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: none;
+}

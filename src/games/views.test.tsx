@@ -84,6 +84,40 @@ describe('each game view can be solved through its own controls', () => {
     ok(results);
   });
 
+  it('03 make10 easy: 2つの きごうを べつべつに きりかえ、「いま」が すぐ かわる', async () => {
+    const p = { target: 10, ops: ['+', '-'], cards: [8, 4, 2].map((value, i) => ({ id: `c${i}`, value })) };
+    const { results } = await renderView('make10', p);
+    expect(screen.getByText('＋と−を おして')).toBeInTheDocument();
+    for (const v of [8, 4, 2]) fireEvent.click(screen.getByRole('button', { name: `${v} の カード` }));
+    const now = () => screen.getByText(/^いま：/).textContent;
+    expect(now()).toBe('いま：14');
+    const toggles = () => screen.getAllByRole('button', { name: /^きごう/ });
+    expect(toggles()).toHaveLength(2);
+    expect(toggles()[0]).toHaveAccessibleName('きごう たす。おすと ひく に かわる');
+    fireEvent.click(toggles()[1]); // 8 + 4 − 2
+    expect(now()).toBe('いま：10');
+    expect(toggles()[1]).toHaveAccessibleName('きごう ひく。おすと たす に かわる');
+    expect(toggles()[0]).toHaveAccessibleName('きごう たす。おすと ひく に かわる');
+    fireEvent.click(toggles()[0]); // 8 − 4 − 2
+    expect(now()).toBe('いま：2');
+    fireEvent.click(toggles()[0]); // もどす
+    expect(now()).toBe('いま：10');
+    fireEvent.click(screen.getByRole('button', { name: 'こたえる' }));
+    ok(results);
+  });
+
+  it('03 make10 easy: キーボードでも きりかえられる', async () => {
+    const p = { target: 10, ops: ['+', '-'], cards: [7, 5, 2].map((value, i) => ({ id: `c${i}`, value })) };
+    await renderView('make10', p);
+    for (const v of [7, 5, 2]) fireEvent.click(screen.getByRole('button', { name: `${v} の カード` }));
+    const t = screen.getAllByRole('button', { name: /^きごう/ })[1];
+    t.focus();
+    expect(document.activeElement).toBe(t);
+    // ボタンなので Enter / Space でも押せる（ブラウザ標準）。ここでは click で代用
+    fireEvent.click(t);
+    expect(screen.getByText(/^いま：/).textContent).toBe('いま：10');
+  });
+
   it('04 kufuu', async () => {
     const p = GAME_BY_ID.kufuu.logic.fallback('hard')[0];
     const { results } = await renderView('kufuu', p);

@@ -21,7 +21,8 @@ export interface Make10Answer {
 }
 
 const RULES: Record<Difficulty, { counts: number[]; ops: AddSubOp[]; targets: number[]; maxCard: number }> = {
-  easy: { counts: [3], ops: ['+'], targets: [10], maxCard: 9 },
+  // かんたんも ＋ と − を つかえる（足し算だけで解ける問題と、− が必要な問題を半々で出す）
+  easy: { counts: [3], ops: ['+', '-'], targets: [10], maxCard: 9 },
   normal: { counts: [3, 4], ops: ['+', '-'], targets: [10], maxCard: 9 },
   hard: { counts: [4, 5], ops: ['+', '-'], targets: [10], maxCard: 9 },
   challenge: { counts: [4, 5], ops: ['+', '-'], targets: [20, 50], maxCard: 20 },
@@ -54,25 +55,67 @@ export function solveMake10(p: Make10Puzzle, limit = Infinity): Make10Answer[] {
   return out;
 }
 
+/**
+ * 問題の型。
+ * add：ぜんぶ たせば目標になる（足し算だけで解ける）
+ * sub：ぜんぶ たしても目標にならず、− を少なくとも1つ使う必要がある
+ */
+export type Make10Category = 'add' | 'sub';
+export function make10Category(p: Make10Puzzle): Make10Category {
+  return p.cards.reduce((s, c) => s + c.value, 0) === p.target ? 'add' : 'sub';
+}
+
+/** かんたんで 同じ型を 何問まで 続けてよいか */
+export const EASY_MAX_STREAK = 2;
+
+/** 目標を n 個の正の数に分ける（足し算型） */
+function splitTarget(rng: import('../random').Rng, target: number, n: number, maxCard: number): number[] | null {
+  const values: number[] = [];
+  let rest = target;
+  for (let i = 0; i < n - 1; i++) {
+    const v = rng.int(1, Math.min(maxCard, rest - (n - 1 - i)));
+    values.push(v);
+    rest -= v;
+  }
+  if (rest < 1 || rest > maxCard) return null;
+  values.push(rest);
+  return values;
+}
+
+/** a + b − c = 目標 になる3枚（引き算型）。ひく数は 1〜6 にして分かりやすくする */
+function subTriple(rng: import('../random').Rng, target: number, maxCard: number): number[] | null {
+  const c = rng.int(1, 6);
+  const ab = target + c;
+  const aMin = Math.max(1, ab - maxCard);
+  const aMax = Math.min(maxCard, ab - 1);
+  if (aMin > aMax) return null;
+  const a = rng.int(aMin, aMax);
+  return [a, ab - a, c];
+}
+
+/** 直前の問題を見て、つぎに出す型を決める（同じ型が続きすぎないように） */
+function nextEasyCategory(rng: import('../random').Rng, recent: readonly Make10Puzzle[]): Make10Category {
+  const cats = recent.filter((p) => p.cards.length === 3 && p.target === 10).map(make10Category);
+  const last = cats.slice(-EASY_MAX_STREAK);
+  if (last.length === EASY_MAX_STREAK && last.every((c) => c === last[0])) return last[0] === 'add' ? 'sub' : 'add';
+  return rng.chance(0.5) ? 'add' : 'sub';
+}
+
 export const make10: GameLogic<Make10Puzzle, Make10Answer> = {
   id: 'make10',
-  generatorVersion: 1,
-  create(rng, d) {
+  // v2：かんたんで − を使えるようにした（過去の記録の問題はそのまま表示・判定できる）
+  generatorVersion: 2,
+  create(rng, d, recent = []) {
     const r = RULES[d];
     const n = rng.pick(r.counts);
     const target = rng.pick(r.targets);
-    let values: number[];
-    if (!r.ops.includes('-')) {
-      // たし算だけ：目標を n 個の正の数に分ける
-      values = [];
-      let rest = target;
-      for (let i = 0; i < n - 1; i++) {
-        const v = rng.int(1, Math.min(r.maxCard, rest - (n - 1 - i)));
-        values.push(v);
-        rest -= v;
-      }
-      if (rest < 1 || rest > r.maxCard) return null;
-      values.push(rest);
+    let values: number[] | null;
+    if (d === 'easy') {
+      values = nextEasyCategory(rng, recent) === 'add' ? splitTarget(rng, target, n, r.maxCard) : subTriple(rng, target, r.maxCard);
+      if (!values) return null;
+    } else if (!r.ops.includes('-')) {
+      values = splitTarget(rng, target, n, r.maxCard);
+      if (!values) return null;
     } else {
       values = Array.from({ length: n }, () => rng.int(1, r.maxCard));
     }
@@ -92,7 +135,8 @@ export const make10: GameLogic<Make10Puzzle, Make10Answer> = {
   },
   fallback(d) {
     const sets: Record<Difficulty, [number, number[]][]> = {
-      easy: [[10, [2, 3, 5]], [10, [1, 4, 5]], [10, [6, 3, 1]]],
+      // 足し算型3つ・引き算型3つ
+      easy: [[10, [2, 3, 5]], [10, [1, 4, 5]], [10, [6, 3, 1]], [10, [8, 4, 2]], [10, [7, 5, 2]], [10, [9, 3, 2]]],
       normal: [[10, [8, 4, 2]], [10, [7, 5, 2, 4]], [10, [9, 3, 2]]],
       hard: [[10, [9, 6, 3, 2]], [10, [8, 7, 5, 3, 1]], [10, [6, 6, 4, 2]]],
       challenge: [[20, [12, 9, 5, 4]], [50, [20, 18, 9, 3]], [20, [12, 7, 5, 3, 3]]],
@@ -113,13 +157,20 @@ export const make10: GameLogic<Make10Puzzle, Make10Answer> = {
     return { correct: true };
   },
   hints(p) {
-    const sol = solveMake10(p, 1)[0];
+    const sols = solveMake10(p, 50);
+    // 「8 + 4 − 2」のように、たしてから ひく 形の解を ヒントに使う（子どもに分かりやすい）
+    const sol = sols.find((s) => s.ops[0] === '+') ?? sols[0];
     const byId = new Map(p.cards.map((c) => [c.id, c.value]));
     const vals = sol.order.map((id) => byId.get(id)!);
     const sym = (o: AddSubOp) => (o === '+' ? '+' : '−');
     const partial = vals.slice(0, -1).map((v, i) => (i === 0 ? `${v}` : ` ${sym(sol.ops[i - 1])} ${v}`)).join('');
+    const total = p.cards.reduce((s, c) => s + c.value, 0);
+    const first =
+      p.ops.includes('-') && total !== p.target && total > p.target
+        ? `ぜんぶ たすと ${total}。${p.target} より ${total - p.target} おおいね。きごうを − に かえると どうなるかな？`
+        : `${vals[0]} と ${vals[1]} を くみあわせると どうなる？`;
     return [
-      `${vals[0]} と ${vals[1]} を くみあわせると どうなる？`,
+      first,
       `${vals[0]} ${sym(sol.ops[0])} ${vals[1]} から はじめると いいよ`,
       `${partial} ${sym(sol.ops[sol.ops.length - 1])} □ = ${p.target}`,
     ];

@@ -199,9 +199,11 @@ function GamePlayer({
     },
   );
   const recentKeys = useRef<string[]>([]);
+  const recentPuzzles = useRef<unknown[]>([]);
   const newRound = useCallback((): Round => {
-    const { puzzle } = generatePuzzle(meta.logic, createRng(randomSeed()), difficulty, new Set(recentKeys.current.slice(-20)));
+    const { puzzle } = generatePuzzle(meta.logic, createRng(randomSeed()), difficulty, new Set(recentKeys.current.slice(-20)), recentPuzzles.current.slice(-5));
     recentKeys.current.push(meta.logic.key(puzzle));
+    recentPuzzles.current.push(puzzle);
     return { puzzle, attemptId: newId(), startedAt: Date.now(), submits: 0, wrong: 0, hints: 0, solved: false, found: [] };
   }, [meta, difficulty]);
 

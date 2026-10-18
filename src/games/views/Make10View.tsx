@@ -29,24 +29,43 @@ export function Make10View({ puzzle: p, submit, solved, status }: GameViewProps<
     setOps((o) => o.map((x, k) => (k === i ? (x === '+' ? '-' : '+') : x)));
   };
 
-  const cardStyle = { minWidth: 64, minHeight: 84, fontSize: '2rem', borderRadius: 14 } as const;
+  // 3まい＋きごう2つが 375px はばに 1れつで おさまる大きさ
+  const cardStyle = { minWidth: 60, minHeight: 80, fontSize: '2rem', borderRadius: 14, padding: '0 8px' } as const;
   return (
     <section className="stack">
       <div className="card center-text">
         <div className="muted">カードを ぜんぶ 1かいずつ つかって</div>
         <div className="big-expr">{p.target} を つくろう</div>
-        <div className="small muted">{p.ops.length > 1 ? 'あいだの きごうを タップすると ＋／− が かわるよ' : 'たしざんだけ つかうよ'}</div>
+        {p.ops.length > 1 ? (
+          <div className="small" style={{ fontWeight: 700, color: '#b85a12' }}>
+            <span className="phrase">＋と−を おして</span> <span className="phrase">きりかえよう！</span>
+          </div>
+        ) : (
+          <div className="small muted">たしざんだけ つかうよ</div>
+        )}
       </div>
       <div className="card" aria-label="しき">
-        <div className="row center" style={{ minHeight: 90, gap: 6 }}>
+        <div className="row center" style={{ minHeight: 90, gap: 6, flexWrap: 'nowrap' }}>
           {order.length === 0 && <span className="muted">したの カードを タップして ならべよう</span>}
           {order.map((id, i) => (
-            <span key={id} className="row" style={{ gap: 6 }}>
-              {i > 0 && (
-                <button type="button" className="btn" style={{ fontSize: '1.5rem', minWidth: 48 }} onClick={() => toggle(i - 1)} aria-label={`きごう ${ops[i - 1] === '+' ? 'たす' : 'ひく'}`} disabled={p.ops.length < 2}>
-                  {ops[i - 1] === '+' ? '+' : '−'}
-                </button>
-              )}
+            <span key={id} className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+              {i > 0 &&
+                (p.ops.length > 1 ? (
+                  <button
+                    type="button"
+                    className="op-toggle num"
+                    data-op={ops[i - 1]}
+                    onClick={() => toggle(i - 1)}
+                    disabled={solved}
+                    aria-label={`きごう ${ops[i - 1] === '+' ? 'たす' : 'ひく'}。おすと ${ops[i - 1] === '+' ? 'ひく' : 'たす'} に かわる`}
+                  >
+                    {ops[i - 1] === '+' ? '+' : '−'}
+                  </button>
+                ) : (
+                  <span className="num" style={{ fontSize: '1.6rem', minWidth: 24, textAlign: 'center' }} aria-label="たす">
+                    +
+                  </span>
+                ))}
               <button type="button" className="btn num" style={{ ...cardStyle, borderColor: '#f07a2a', background: '#fff7ef' }} onClick={() => remove(i)} aria-label={`${byId.get(id)} の カードを もどす`}>
                 {byId.get(id)}
               </button>

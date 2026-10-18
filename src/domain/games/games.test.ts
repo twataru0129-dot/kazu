@@ -4,7 +4,8 @@ import { DIFFICULTIES } from '../types';
 import { generatePuzzle } from './types';
 import { decompose, exampleSplit, solutionKey } from './decompose';
 import { enumerateSolutions, pittari } from './pittari';
-import { make10, solveMake10 } from './make10';
+import { EASY_MAX_STREAK, make10, make10Category, solveMake10, type Make10Puzzle } from './make10';
+import { evaluateLinear } from '../expr';
 import { kufuu } from './kufuu';
 import { balance, correctSide, sideValue } from './balance';
 import { possibleAnswers, sequence } from './sequence';
@@ -78,7 +79,7 @@ describe('03 make10', () => {
         const sols = solveMake10(p, 30);
         expect(sols.length).toBeGreaterThan(0);
         for (const s of sols) expect(make10.judge(p, s).correct).toBe(true);
-        if (d === 'easy') expect(p.cards.reduce((a, c) => a + c.value, 0)).toBe(10);
+        if (d === 'easy') expect(p.ops).toEqual(['+', '-']);
       }
     }
     const p = { target: 10, ops: ['+' as const], cards: [{ id: 'a', value: 5 }, { id: 'b', value: 5 }, { id: 'c', value: 0 + 0 + 0 }] };
@@ -89,6 +90,100 @@ describe('03 make10', () => {
   it('does not use eval', async () => {
     const src = await import('node:fs').then((fs) => fs.readFileSync('src/domain/games/make10.ts', 'utf8') + fs.readFileSync('src/domain/expr.ts', 'utf8'));
     expect(src).not.toMatch(/\beval\(|new Function/);
+  });
+});
+
+describe('03 make10 easy: ＋ と − を 半々で', () => {
+  const easy = (vals: number[]): Make10Puzzle => ({ target: 10, ops: ['+', '-'], cards: vals.map((value, i) => ({ id: `c${i}`, value })) });
+
+  it('8・4・2 は 8 + 4 − 2 = 10 で正解。ならべかえた別の正しい式も正解', () => {
+    const p = easy([8, 4, 2]);
+    expect(make10.validate(p, 'easy')).toBeNull();
+    expect(make10Category(p)).toBe('sub');
+    expect(make10.judge(p, { order: ['c0', 'c1', 'c2'], ops: ['+', '-'] }).correct).toBe(true);
+    expect(make10.judge(p, { order: ['c1', 'c0', 'c2'], ops: ['+', '-'] }).correct).toBe(true);
+    expect(make10.judge(p, { order: ['c0', 'c2', 'c1'], ops: ['-', '+'] }).correct).toBe(true); // 8 − 2 + 4
+    expect(make10.judge(p, { order: ['c0', 'c1', 'c2'], ops: ['+', '+'] }).correct).toBe(false); // 14
+    expect(make10.judge(p, { order: ['c2', 'c0', 'c1'], ops: ['-', '+'] }).correct).toBe(false); // とちゅうが マイナス
+    // 判定は 解の一覧（ソルバー）と すべて一致する
+    for (const s of solveMake10(p)) expect(make10.judge(p, s).correct).toBe(true);
+  });
+
+  it('3・5・2 は 3 + 5 + 2 = 10 で正解', () => {
+    const p = easy([3, 5, 2]);
+    expect(make10.validate(p, 'easy')).toBeNull();
+    expect(make10Category(p)).toBe('add');
+    expect(make10.judge(p, { order: ['c0', 'c1', 'c2'], ops: ['+', '+'] }).correct).toBe(true);
+  });
+
+  it('同じ数字のカードも ID で区別する', () => {
+    const p = easy([6, 6, 2]);
+    expect(make10.judge(p, { order: ['c0', 'c1', 'c2'], ops: ['+', '-'] }).correct).toBe(true);
+    expect(make10.judge(p, { order: ['c0', 'c0', 'c2'], ops: ['+', '-'] }).correct).toBe(false);
+    expect(make10.judge(p, { order: ['c0', 'c2'], ops: ['+'] }).correct).toBe(false);
+    expect(make10.judge(p, { order: ['c0', 'c1', 'x'], ops: ['+', '-'] }).correct).toBe(false);
+  });
+
+  it('むかしの記録（かんたん・＋だけ）の問題も そのまま判定できる', () => {
+    const old: Make10Puzzle = { target: 10, ops: ['+'], cards: [2, 3, 5].map((value, i) => ({ id: `c${i}`, value })) };
+    expect(make10.judge(old, { order: ['c0', 'c1', 'c2'], ops: ['+', '+'] }).correct).toBe(true);
+    expect(make10.judge(old, { order: ['c0', 'c1', 'c2'], ops: ['+', '-'] }).correct).toBe(false);
+  });
+
+  it('引き算型のヒントは「− に かえる」考え方から。ヒントの式は本当の解と一致する', () => {
+    const p = easy([8, 4, 2]);
+    const h = make10.hints(p);
+    expect(h[0]).toMatch(/ぜんぶ たすと 14/);
+    expect(h[0]).toMatch(/−/);
+    // 3段目「8 + 4 − □ = 10」の □ に のこりの カードを入れると 正解
+    const m = h[2].match(/^(\d+) ([+−]) (\d+) ([+−]) □ = 10$/)!;
+    expect(m).not.toBeNull();
+    const nums = [Number(m[1]), Number(m[3])];
+    const rest = [8, 4, 2].filter((v, i, a) => a.indexOf(v) === i).find((v) => !nums.includes(v))!;
+    const sym = (s: string) => (s === '+' ? '+' : '-') as '+' | '-';
+    expect(evaluateLinear({ nums: [...nums, rest], ops: [sym(m[2]), sym(m[4])] })!.value).toBe(10);
+  });
+
+  it('1200問：全問に解があり、足し算型と引き算型が半々くらい、同じ型は2問まで', () => {
+    const N = 1200;
+    const recent: Make10Puzzle[] = [];
+    const counts = { add: 0, sub: 0 };
+    let invalid = 0;
+    let streak = 0;
+    let maxStreak = 0;
+    let prev: string | null = null;
+    for (let seed = 1; seed <= N; seed++) {
+      const { puzzle: p } = generatePuzzle(make10, createRng(seed * 31), 'easy', new Set(), recent.slice(-5));
+      recent.push(p);
+      const cat = make10Category(p);
+      counts[cat]++;
+      streak = cat === prev ? streak + 1 : 1;
+      prev = cat;
+      maxStreak = Math.max(maxStreak, streak);
+      const values = p.cards.map((c) => c.value);
+      const ok =
+        make10.validate(p, 'easy') === null &&
+        p.cards.length === 3 &&
+        p.target === 10 &&
+        values.every((v) => Number.isInteger(v) && v >= 1 && v <= 9) &&
+        solveMake10(p).length > 0 &&
+        solveMake10(p).every((s) => evaluateLinear({ nums: s.order.map((id) => p.cards.find((c) => c.id === id)!.value), ops: s.ops })!.minIntermediate >= 0) &&
+        // 引き算型は ぜんぶ ＋ では 10 に ならない（− が必要）
+        (cat === 'add' || !solveMake10(p).some((s) => s.ops.every((o) => o === '+'))) &&
+        (cat === 'sub' || solveMake10(p).some((s) => s.ops.every((o) => o === '+')));
+      if (!ok) invalid++;
+    }
+    console.log(`make10 easy ${N}問: 足し算型 ${counts.add} / 引き算型 ${counts.sub} / 不正 ${invalid} / 同じ型の最大連続 ${maxStreak}`);
+    expect(invalid).toBe(0);
+    expect(counts.add).toBeGreaterThan(N * 0.4);
+    expect(counts.sub).toBeGreaterThan(N * 0.4);
+    expect(maxStreak).toBeLessThanOrEqual(EASY_MAX_STREAK);
+  });
+
+  it('予備問題にも 足し算型と引き算型の両方がある', () => {
+    const bank = make10.fallback('easy');
+    expect(bank.some((p) => make10Category(p) === 'add')).toBe(true);
+    expect(bank.some((p) => make10Category(p) === 'sub')).toBe(true);
   });
 });
 
