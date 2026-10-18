@@ -12,11 +12,26 @@ import { MulLesson } from '../screens/learn/MulLesson';
 import { DivLesson } from '../screens/learn/DivLesson';
 import { TestScreen } from '../screens/test/TestScreen';
 import { ParentScreen } from '../screens/parent/ParentScreen';
+import { useParental } from './ParentalContext';
+import { LockScreen } from '../screens/parental/LockScreen';
+import { PlaytimeNotice } from '../screens/parental/PlaytimeNotice';
 
 /** プロフィールが必要な画面 */
 const NEEDS_PROFILE = ['/home', '/calc', '/play', '/learn', '/test', '/parent'];
 
 export function App() {
+  const parental = useParental();
+  // 時間切れのときは、どの画面・どの URL でもロック画面だけを出す（戻る・URL 変更でも抜けられない）
+  if (parental.locked) return <LockScreen />;
+  return (
+    <>
+      <Routes />
+      <PlaytimeNotice />
+    </>
+  );
+}
+
+function Routes() {
   const app = useApp();
   const path = usePath();
   const base = '/' + (path.split('/')[1] ?? '');

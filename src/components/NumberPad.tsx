@@ -14,19 +14,24 @@ interface Props {
   keyboard?: boolean;
   /** 空でも送信ボタンを押せるようにする（通常は空だと押せない） */
   allowEmptySubmit?: boolean;
+  /** 先頭の 0 を残す（暗証番号の 0123 など。答えの数では 0 を取りのぞく） */
+  keepLeadingZeros?: boolean;
 }
 
 /**
  * 共通の数字キー。画面のボタンと物理キーボードは同じ処理を通る。
  * 連打・二重送信を防ぐため、送信は短時間に1回だけ。
  */
-export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえる', maxDigits = 6, disabled, keyboard = true, allowEmptySubmit }: Props) {
+export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえる', maxDigits = 6, disabled, keyboard = true, allowEmptySubmit, keepLeadingZeros }: Props) {
+  const append = (cur: string, d: string) => (keepLeadingZeros ? (cur.length >= maxDigits ? cur : cur + d) : appendDigit(cur, d, maxDigits));
   const lastSubmit = useRef(0);
+  const appendRef = useRef<(cur: string, d: string) => string>(() => '');
   const valueRef = useRef(value);
   valueRef.current = value;
   const handlers = useRef({ onChange, onSubmit });
   handlers.current = { onChange, onSubmit };
 
+  appendRef.current = append;
   const submit = () => {
     const now = Date.now();
     if (now - lastSubmit.current < 300) return;
@@ -47,7 +52,7 @@ export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえ�
       if (d !== null) {
         e.preventDefault();
         lastSubmit.current = 0; // 新しく入力したら、送信の連打防止を解除
-        handlers.current.onChange(appendDigit(valueRef.current, d, maxDigits));
+        handlers.current.onChange(appendRef.current(valueRef.current, d));
       } else if (e.key === 'Backspace') {
         e.preventDefault();
         handlers.current.onChange(valueRef.current.slice(0, -1));
@@ -73,7 +78,7 @@ export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえ�
   const press = (d: string) => {
     play('tap');
     lastSubmit.current = 0;
-    onChange(appendDigit(value, d, maxDigits));
+    onChange(append(value, d));
   };
 
   // 使えないとき（正解したあと・一時停止中）は キーを しまって、つぎの操作を 押しやすくする
