@@ -3,6 +3,7 @@ import { dotsDiff, toggleLine, type DotsAnswer, type DotsPuzzle, type Pt, type S
 import { play } from '../../audio/sfx';
 import { InDock } from '../../components/Dock';
 import type { GameViewProps } from '../types';
+import { useFitCell } from '../useFitCell';
 
 const pos = ([x, y]: Pt) => `うえから ${y + 1}ばんめ ひだりから ${x + 1}ばんめ`;
 
@@ -60,6 +61,8 @@ export function DotsView({ puzzle: p, submit, solved, status, draft, saveDraft, 
   };
 
   const view = `-0.5 -0.5 ${n} ${n}`;
+  // 点を押せる範囲は、その点の まわりの 1マスぶん ぜんぶ（320px 幅の 6×6 でも 48px）
+  const { ref: boardRef, cell } = useFitCell<SVGSVGElement>(n, { min: 48, max: 80 });
   const onKey = (e: KeyboardEvent, pt: Pt) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -69,17 +72,28 @@ export function DotsView({ puzzle: p, submit, solved, status, draft, saveDraft, 
 
   return (
     <section className="stack">
-      <div className="card stack" style={{ gap: 6, alignItems: 'center' }}>
-        <strong>みほん</strong>
-        <svg viewBox={view} role="img" aria-label={`みほんの かたち（みじかい せんで ${p.segments.length}ほん）`} style={{ width: 'min(42vw, 180px)', height: 'auto', display: 'block' }} data-testid="dots-sample">
-          <Dots n={n} r={0.07} fill="#9fb3c6" />
-          <Lines segs={p.segments} color="#7a55c8" width={0.12} data />
-        </svg>
+      <div className="card row" style={{ gap: 10, padding: 10, flexWrap: 'nowrap', alignItems: 'center' }}>
+        <div className="stack" style={{ gap: 2, alignItems: 'center', flex: '0 0 auto' }}>
+          <strong className="small">みほん</strong>
+          <svg viewBox={view} role="img" aria-label={`みほんの かたち（みじかい せんで ${p.segments.length}ほん）`} style={{ width: 104, height: 104, display: 'block' }} data-testid="dots-sample">
+            <Dots n={n} r={0.08} fill="#9fb3c6" />
+            <Lines segs={p.segments} color="#7a55c8" width={0.14} data />
+          </svg>
+        </div>
+        <p className="small" style={{ margin: 0, minHeight: '4.5em' }} aria-live="polite">
+          {sel ? 'つぎの てんを タップしてね。おなじ てんを おすと やめるよ。' : 'てんを 2つ じゅんに タップすると せんが ひけるよ。おなじ せんを もういちど ひくと きえるよ。'}
+        </p>
       </div>
-      <p className="center-text small muted" style={{ margin: 0 }} aria-live="polite">
-        {sel ? `${pos(sel)}の てんから ひくよ。つぎの てんを タップしてね（おなじ てんで やめる）` : 'てんを 2つ じゅんに タップすると せんが ひけるよ。おなじ せんを もういちど ひくと きえるよ。'}
-      </p>
-      <svg viewBox={view} style={{ width: 'min(100%, 460px)', height: 'auto', display: 'block', margin: '0 auto', touchAction: 'manipulation', background: '#fff', borderRadius: 12, border: '2px solid #c6d6e4' }} aria-label="きみの ばん" role="group">
+      <svg
+        ref={boardRef}
+        viewBox={view}
+        width={cell * n}
+        height={cell * n}
+        style={{ display: 'block', margin: '0 auto', touchAction: 'manipulation', background: '#fff', borderRadius: 12, boxShadow: 'inset 0 0 0 2px #c6d6e4' }}
+        aria-label="きみの ばん"
+        role="group"
+        data-testid="dots-board"
+      >
         <Lines segs={segs} color="#2a7fd0" width={0.12} />
         {diff && <Lines segs={diff.missing.slice(0, 1)} color="#f4b400" width={0.14} dash="0.15 0.12" />}
         {diff && !diff.missing.length && <Lines segs={diff.extra.slice(0, 1)} color="#e0533d" width={0.2} dash="0.15 0.12" />}
@@ -89,11 +103,12 @@ export function DotsView({ puzzle: p, submit, solved, status, draft, saveDraft, 
           const pt: Pt = [i % n, Math.floor(i / n)];
           const isSel = !!sel && sel[0] === pt[0] && sel[1] === pt[1];
           return (
-            <circle
+            <rect
               key={i}
-              cx={pt[0]}
-              cy={pt[1]}
-              r={0.48}
+              x={pt[0] - 0.5}
+              y={pt[1] - 0.5}
+              width={1}
+              height={1}
               fill="transparent"
               role="button"
               tabIndex={0}
