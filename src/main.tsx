@@ -13,4 +13,5 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+document.documentElement.dataset.appVersion = __APP_VERSION__;
 registerServiceWorker();

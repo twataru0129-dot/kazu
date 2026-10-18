@@ -1,6 +1,6 @@
 import { useApp, useProfile } from '../app/AppContext';
 import { navigate } from '../app/router';
-import { applyUpdate, useUpdateAvailable } from '../app/pwa';
+import { applyUpdate, useUpdateState } from '../app/pwa';
 import { Avatar } from '../components/Avatar';
 import { IconGear, IconSwitch, ModeIcon } from '../components/Icons';
 import { SoundToggle } from '../components/ui';
@@ -9,7 +9,7 @@ import { APP_NAME, MODES, type ModeKey } from '../config/theme';
 export function HomeScreen() {
   const { profile } = useProfile();
   const app = useApp();
-  const update = useUpdateAvailable();
+  const update = useUpdateState();
   return (
     <main className="screen">
       <header className="topbar">
@@ -33,7 +33,12 @@ export function HomeScreen() {
           この ブラウザでは きろくを ほぞん できません（とじると きえます）。あそぶ ことは できます。
         </div>
       )}
-      {update && (
+      {update === 'applying' && (
+        <div className="banner info" role="status">
+          あたらしい バージョンに しています…（きろくは きえません）
+        </div>
+      )}
+      {update === 'waiting' && (
         <div className="banner info">
           あたらしい バージョンが あります。
           <button type="button" className="btn" onClick={applyUpdate}>

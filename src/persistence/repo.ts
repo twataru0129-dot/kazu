@@ -36,7 +36,17 @@ export class Repo {
   }
 
   /** 書き込みを行い、成否を通知する。失敗は呼び出し側にも返す（保存できたと偽らない）。 */
+  private pending = 0;
+  private idleWaiters: (() => void)[] = [];
+
+  /** 書き込み中のものがすべて終わったら解決する（アプリ更新の再読み込み前に使う） */
+  whenIdle(): Promise<void> {
+    if (this.pending === 0) return Promise.resolve();
+    return new Promise((resolve) => this.idleWaiters.push(resolve));
+  }
+
   private async write<T>(fn: () => Promise<T>): Promise<T> {
+    this.pending++;
     try {
       const r = await fn();
       notify(true);
@@ -44,6 +54,9 @@ export class Repo {
     } catch (e) {
       notify(false, e);
       throw e;
+    } finally {
+      this.pending--;
+      if (this.pending === 0) this.idleWaiters.splice(0).forEach((f) => f());
     }
   }
 
