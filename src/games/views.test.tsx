@@ -87,7 +87,7 @@ describe('each game view can be solved through its own controls', () => {
   it('03 make10 easy: 2つの きごうを べつべつに きりかえ、「いま」が すぐ かわる', async () => {
     const p = { target: 10, ops: ['+', '-'], cards: [8, 4, 2].map((value, i) => ({ id: `c${i}`, value })) };
     const { results } = await renderView('make10', p);
-    expect(screen.getByText('＋と−を おして')).toBeInTheDocument();
+    expect(screen.getByText('＋か −を えらんでから')).toBeInTheDocument();
     for (const v of [8, 4, 2]) fireEvent.click(screen.getByRole('button', { name: `${v} の カード` }));
     const now = () => screen.getByText(/^いま：/).textContent;
     expect(now()).toBe('いま：14');
