@@ -3,6 +3,7 @@ import { createProfile } from './helpers';
 
 type Tri = [number, number, number];
 interface Puzzle {
+  title: string;
   width: number;
   height: number;
   pieces: { tris: Tri[] }[];
@@ -27,7 +28,7 @@ async function readPuzzle(page: Page): Promise<Puzzle> {
   );
 }
 
-async function solve(page: Page, useDrag: boolean) {
+async function solve(page: Page, useDrag: boolean): Promise<Puzzle> {
   const tray = page.getByLabel('ピース', { exact: true }).getByRole('button');
   // まず1つ置いて、途中保存から問題を読む
   await tray.first().click();
@@ -65,6 +66,7 @@ async function solve(page: Page, useDrag: boolean) {
       await page.mouse.click(target.x, target.y);
     }
   }
+  return p;
 }
 
 for (const [label, drag] of [
@@ -79,7 +81,12 @@ for (const [label, drag] of [
     await page.goto('/#/play/shapes');
     await page.getByRole('radio', { name: new RegExp(label) }).click();
     await page.getByRole('button', { name: 'はじめる' }).click();
-    await solve(page, drag);
+    await expect(page.getByText('かげと おなじ かたちを つくろう！')).toBeVisible();
+    const { title } = await solve(page, drag);
+    // もんだいの なまえ（でんしゃ・き など）は 画面に出さない
+    expect(title.length).toBeGreaterThan(0);
+    await expect(page.getByText(`「${title}」`)).toHaveCount(0);
+    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
     await expect(page.getByText('せいかい！')).toBeVisible();
   });
 }

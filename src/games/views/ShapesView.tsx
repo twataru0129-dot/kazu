@@ -57,12 +57,17 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
   const [avail, setAvail] = useState(320);
   const [viewH, setViewH] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 700));
   const [dockH, setDockH] = useState(0);
+  /** 盤面カードの上端（ページの先頭から）。見出しの高さに合わせて盤面を大きくするため */
+  const [boardTop, setBoardTop] = useState(150);
+  const boardCardRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const dock = wrapRef.current?.closest('main')?.querySelector<HTMLElement>('.dock');
     const update = () => {
       setViewH(window.visualViewport?.height ?? window.innerHeight);
       setDockH(dock?.offsetHeight ?? 0);
+      const card = boardCardRef.current;
+      if (card) setBoardTop(card.getBoundingClientRect().top + window.scrollY);
     };
     update();
     const ro = typeof ResizeObserver !== 'undefined' && dock ? new ResizeObserver(update) : null;
@@ -85,8 +90,8 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
     return () => ro?.disconnect();
   }, []);
 
-  // 盤面は 横幅と「画面の高さ − 下の操作ドック − 見出し」の どちらにも 収まる大きさにする
-  const maxH = Math.max(160, viewH - dockH - 150);
+  // 盤面は 横幅と「画面の高さ − 下の操作ドック − 盤面より上の部分 − 盤面の下の1行」の どちらにも 収まる大きさにする
+  const maxH = Math.max(160, viewH - dockH - boardTop - 24 - 36);
   const cs = Math.max(28, Math.min(72, Math.floor((avail - 32) / (p.width + 0.3)), Math.floor(maxH / (p.height + 0.3))));
   const shapeOf = (i: number) => rotated(p.pieces[i].tris, rots[i]);
 
@@ -215,11 +220,11 @@ export function ShapesView({ puzzle: p, submit, solved, status, draft, saveDraft
 
   return (
     <section className="stack" ref={wrapRef}>
+      {/* もんだいの なまえ（p.title）は 出さない：かげの形が なまえに にていないと まよう もとになるため */}
       <div className="center-text">
-        <strong>「{p.title}」</strong>
-        <span className="small muted">　ピースを えらんで かげの うえを タップ、または ひっぱって おこう</span>
+        <strong className="phrase">ピースを えらんで</strong> <strong className="phrase">かげと おなじ かたちを つくろう！</strong>
       </div>
-      <div className="card" style={{ display: 'flex', justifyContent: 'center', padding: 12, touchAction: drag ? 'none' : 'auto' }}>
+      <div ref={boardCardRef} className="card" style={{ display: 'flex', justifyContent: 'center', padding: 12, touchAction: drag ? 'none' : 'auto' }}>
         <svg
           ref={boardRef}
           viewBox={`-0.15 -0.15 ${p.width + 0.3} ${p.height + 0.3}`}
