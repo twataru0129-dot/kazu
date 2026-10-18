@@ -304,6 +304,36 @@ export function GameIcon({ id }: { id: GameId }) {
             {t(24, 44, '?', 10, '#7a55c8')}
           </>
         );
+      case 'missing-number':
+        return (
+          <>
+            {t(9, 30, '4', 14)}
+            {t(18, 30, '+', 12)}
+            <rect x="22" y="18" width="12" height="16" rx="3" fill="#fff" stroke="#2a7fd0" strokeWidth="2" strokeDasharray="3 2" />
+            {t(39, 30, '=', 12)}
+            {t(24, 46, '7', 10, '#1f9d6a')}
+            <path d="M28 8c-4 0-6 3-6 6M36 10c0 3-3 4-6 4" stroke="#7bbf5a" strokeWidth="3" fill="none" strokeLinecap="round" />
+          </>
+        );
+      case 'triangle-pattern':
+        return (
+          <>
+            {[0, 1].map((r) =>
+              [0, 1].map((c) => <rect key={`${r}${c}`} x={6 + c * 18} y={6 + r * 18} width="17" height="17" rx="2" fill="#fff" stroke="#9fb3c6" />),
+            )}
+            <path d="M6 6h17L6 23Z" fill="#4a7fd6" />
+            <path d="M24 6h17v17Z" fill="#7a55c8" />
+            <path d="M41 24v17H24Z" fill="#4a7fd6" />
+            <rect x="6" y="24" width="17" height="17" fill="#ef7d57" />
+          </>
+        );
+      case 'dot-connect':
+        return (
+          <>
+            <path d="M10 38 L24 10 L38 38 Z M10 38 L38 24" stroke="#2a7fd0" strokeWidth="3" fill="none" strokeLinejoin="round" />
+            {[10, 24, 38].map((y) => [10, 24, 38].map((x) => <circle key={`${x}${y}`} cx={x} cy={y} r="3" fill="#1b2838" />))}
+          </>
+        );
     }
   })();
   return (

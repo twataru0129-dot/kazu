@@ -16,6 +16,9 @@ import { MazeView } from './views/MazeView';
 import { ShapesView } from './views/ShapesView';
 import { MirrorView } from './views/MirrorView';
 import { PatternView } from './views/PatternView';
+import { MissingView } from './views/MissingView';
+import { TriangleView } from './views/TriangleView';
+import { DotsView } from './views/DotsView';
 
 /** ゲームID → ゲーム固有の画面。ドメインの登録表（registry）と対になる。 */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,4 +39,7 @@ export const GAME_VIEWS: Record<GameId, ComponentType<any>> = {
   shapes: ShapesView,
   mirror: MirrorView,
   pattern: PatternView,
+  'missing-number': MissingView,
+  'triangle-pattern': TriangleView,
+  'dot-connect': DotsView,
 };

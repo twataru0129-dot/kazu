@@ -1,4 +1,4 @@
-# 17個目以降のゲームを追加する手順
+# 新しいゲームを追加する手順
 
 ゲームは「ドメインのロジック（純粋関数）」と「固有の画面」の2つでできています。
 進行（難しさ選択・5問セット・ヒント・記録・途中保存・次へ）は共通の `src/games/GameScreen.tsx` が担当します。
@@ -53,6 +53,7 @@ export const clock: GameLogic<ClockPuzzle, number | null> = {
 - ゲーム固有の性質（一意性・多解の受理など）を `src/domain/games/games.test.ts` に追加
 - 画面を操作して正解できることを `src/games/views.test.tsx` に追加
 - `e2e/layout.spec.ts` の `GAMES` に ID を追加（各画面幅ではみ出しがないか）
+- ID は `missing-number` のような 英小文字とハイフンの組み合わせでもよい（`GameId` と `GAME_VIEWS` のキーを一致させる）
 
 ## 6. 記録
 

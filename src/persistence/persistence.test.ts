@@ -112,6 +112,25 @@ describe('backup', () => {
     expect((await repo.getSettings(a.id)).soundOn).toBe(false);
   });
 
+  it('new game ids (17〜19) survive export → replace import, together with older records', async () => {
+    const { repo, a } = await seeded();
+    for (const [i, gameId] of ['missing-number', 'triangle-pattern', 'dot-connect'].entries()) {
+      await repo.saveAttempt({ ...attempt(a.id, 20 + i, 'g1'), mode: 'game', op: undefined, gameId, questionKey: `${gameId}:${i}` });
+    }
+    await repo.saveSession({ id: 'g1', profileId: a.id, mode: 'game', gameId: 'dot-connect', createdAt: 'x', updatedAt: 'x', status: 'inProgress', settingsSnapshot: {}, activeDraft: { view: { segments: [[0, 0, 1, 0]] } } });
+    await repo.saveSettings({ ...(await repo.getSettings(a.id)), preferredDifficultyByGame: { 'triangle-pattern': 'hard' } });
+    const json = JSON.stringify(await exportBundle(repo));
+    const fresh = new Repo(memoryBackend());
+    const pv = await previewImport(fresh, json);
+    expect(pv.ok).toBe(true);
+    await applyImport(fresh, pv.bundle!, 'replace');
+    const list = await fresh.listAttempts(a.id);
+    expect(list.map((x) => x.gameId).filter(Boolean).sort()).toEqual(['dot-connect', 'missing-number', 'triangle-pattern']);
+    expect(list.filter((x) => x.mode === 'calculation')).toHaveLength(1);
+    expect((await fresh.findDraft(a.id, 'game', 'dot-connect'))?.activeDraft).toEqual({ view: { segments: [[0, 0, 1, 0]] } });
+    expect((await fresh.getSettings(a.id)).preferredDifficultyByGame['triangle-pattern']).toBe('hard');
+  });
+
   it('merge skips duplicate IDs instead of overwriting', async () => {
     const { repo, a } = await seeded();
     const bundle = await exportBundle(repo);

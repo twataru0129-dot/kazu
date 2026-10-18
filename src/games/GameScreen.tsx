@@ -256,14 +256,35 @@ function GamePlayer({
 
   // 途中の盤面は少し待ってから保存（操作のたびに書き込みすぎない）
   const draftTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const draftPending = useRef(false);
   const saveDraft = useCallback(
     (state: unknown) => {
       viewDraftRef.current = state;
+      draftPending.current = true;
       clearTimeout(draftTimer.current);
-      draftTimer.current = setTimeout(() => persistDraft(roundRef.current, state), 300);
+      draftTimer.current = setTimeout(() => {
+        draftPending.current = false;
+        persistDraft(roundRef.current, state);
+      }, 300);
     },
     [persistDraft],
   );
+  // アプリを切り替えた・閉じたときは、待っている保存を すぐ行う（iPhone でホームに戻ったときなど）
+  useEffect(() => {
+    const flushNow = () => {
+      if (!draftPending.current) return;
+      clearTimeout(draftTimer.current);
+      draftPending.current = false;
+      if (!roundRef.current.solved) persistDraft(roundRef.current, viewDraftRef.current);
+    };
+    const onVisibility = () => document.visibilityState === 'hidden' && flushNow();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', flushNow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', flushNow);
+    };
+  }, [persistDraft]);
   useEffect(
     () => () => {
       // 画面を離れるときに、待っていた保存を すぐ行う

@@ -17,7 +17,10 @@ export type GameId =
   | 'maze'
   | 'shapes'
   | 'mirror'
-  | 'pattern';
+  | 'pattern'
+  | 'missing-number'
+  | 'triangle-pattern'
+  | 'dot-connect';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle';
 
