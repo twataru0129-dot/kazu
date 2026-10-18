@@ -4,6 +4,7 @@ import { navigate } from '../app/router';
 import { play } from '../audio/sfx';
 import { speak } from '../audio/speech';
 import { NumberPad } from '../components/NumberPad';
+import { DockLayout } from '../components/Dock';
 import { AnswerBox, Feedback, HintButton, HintPanel, ProgressDots, SoundToggle, TopBar } from '../components/ui';
 import { arithHints, explain } from '../domain/arithmetic/explain';
 import {
@@ -151,6 +152,7 @@ export function CalcScreen() {
     recent.current.push(p.key);
     const nq: Q = { p, attemptId: newId(), input: '', wrong: 0, submits: 0, hints: 0, solved: false, startedAt: Date.now() };
     setQ(nq);
+    window.scrollTo(0, 0);
     setFeedback(null);
     setShowExplain(false);
   };
@@ -301,6 +303,22 @@ export function CalcScreen() {
           </>
         }
       />
+      <DockLayout
+        footer={
+          q.solved ? (
+            <button type="button" className="btn primary big block" onClick={() => goNext(false)} autoFocus>
+              つぎへ →
+            </button>
+          ) : (
+            <>
+              <HintButton level={q.hints} onClick={() => setQ({ ...q, hints: Math.min(3, q.hints + 1) })} />
+              <button type="button" className="btn ghost" onClick={() => goNext(true)}>
+                とばす
+              </button>
+            </>
+          )
+        }
+      >
       {count !== 0 && count <= 20 && <ProgressDots total={count} done={index + (q.solved ? 1 : 0)} current={index} />}
       <div className="card center-text">
         <div className="big-expr" aria-label={`${formatProblem(q.p)} は？`}>
@@ -315,15 +333,7 @@ export function CalcScreen() {
       )}
       <HintPanel hints={hints} level={q.hints} />
       {!q.solved ? (
-        <>
-          <NumberPad value={q.input} onChange={(v) => setQ({ ...q, input: v })} onSubmit={submit} maxDigits={5} />
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <HintButton level={q.hints} onClick={() => setQ({ ...q, hints: Math.min(3, q.hints + 1) })} />
-            <button type="button" className="btn ghost" onClick={() => goNext(true)}>
-              とばす
-            </button>
-          </div>
-        </>
+        <NumberPad value={q.input} onChange={(v) => setQ({ ...q, input: v })} onSubmit={submit} maxDigits={5} />
       ) : (
         <div className="stack">
           <button type="button" className="btn" onClick={() => setShowExplain(!showExplain)} aria-expanded={showExplain}>
@@ -348,11 +358,9 @@ export function CalcScreen() {
               ))}
             </div>
           )}
-          <button type="button" className="btn primary big" onClick={() => goNext(false)} autoFocus>
-            つぎへ →
-          </button>
         </div>
       )}
+      </DockLayout>
     </main>
   );
 }

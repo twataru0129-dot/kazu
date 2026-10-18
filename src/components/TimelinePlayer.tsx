@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../app/AppContext';
 import { speak, stopSpeech } from '../audio/speech';
 import { IconPause, IconPlay, IconRestart } from './Icons';
+import { keepMath } from '../domain/text';
 
 /**
  * 動画のように再生できる説明アニメーション（SVG＋タイムライン）。
@@ -13,6 +14,8 @@ export interface Scene {
   caption: string;
   /** t: この場面の進み具合 0〜1 */
   render(t: number): ReactNode;
+  /** 式の数の意味など、小さくしたくない説明（アニメの下に大きな文字で出す） */
+  legend?: { value: string; color: string; label: string; at: number }[];
 }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -91,10 +94,24 @@ export function TimelinePlayer({ scenes, title }: { scenes: Scene[]; title: stri
         <svg viewBox="0 0 360 220" width="100%" role="img" aria-label={scenes[idx].caption} style={{ display: 'block' }}>
           {scenes[idx].render(t)}
         </svg>
+        {scenes[idx].legend && (
+          <ul className="eq-legend" aria-label="しきの かずの いみ">
+            {scenes[idx].legend!.map((l) => (
+              <li key={l.value} style={{ opacity: reduced ? 1 : Math.min(1, Math.max(0.12, (local - l.at) / 0.08)) }}>
+                <span className="eq-chip num" style={{ background: l.color }}>
+                  {l.value}
+                </span>
+                <span className="eq-label" style={{ color: l.color }}>
+                  {l.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {captions && (
         <div className="center-text" style={{ minHeight: '3em', fontWeight: 700, fontSize: '1.1rem', background: '#1b2838', color: '#fff', borderRadius: 12, padding: '8px 12px' }} aria-live="polite">
-          {scenes[idx].caption}
+          {keepMath(scenes[idx].caption)}
         </div>
       )}
       <div className="bar" aria-hidden>

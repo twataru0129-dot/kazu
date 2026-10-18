@@ -63,9 +63,26 @@ export function Stepper({ label, value, min, max, onChange }: { label: string; v
 
 export function LessonTabs<T extends string>({ tabs, value, onChange }: { tabs: [T, string][]; value: T; onChange(v: T): void }) {
   return (
-    <div className="tabs" role="tablist">
+    <div className="grid-tabs" role="tablist" style={{ ['--n' as string]: tabs.length, ['--cols' as string]: tabs.length <= 4 ? 2 : 3 }}>
       {tabs.map(([k, l]) => (
-        <button key={k} type="button" role="tab" aria-selected={value === k} className="chip" onClick={() => onChange(k)}>
+        <button
+          key={k}
+          type="button"
+          role="tab"
+          aria-selected={value === k}
+          tabIndex={value === k ? 0 : -1}
+          className="chip"
+          onClick={() => onChange(k)}
+          onKeyDown={(e) => {
+            const i = tabs.findIndex(([x]) => x === k);
+            const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+            if (!d) return;
+            e.preventDefault();
+            const next = tabs[(i + d + tabs.length) % tabs.length][0];
+            onChange(next);
+            (e.currentTarget.parentElement?.children[(i + d + tabs.length) % tabs.length] as HTMLElement | undefined)?.focus();
+          }}
+        >
           {l}
         </button>
       ))}

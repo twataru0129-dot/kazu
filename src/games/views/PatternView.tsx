@@ -1,6 +1,7 @@
 import type { ColorKind, PatternPuzzle, ShapeKind, Token } from '../../domain/games/pattern';
 import { sameToken } from '../../domain/games/pattern';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 const COLOR: Record<ColorKind, string> = { red: '#e8504f', blue: '#3d7fd9', yellow: '#f2b705', green: '#2fa36b' };
 const COLOR_NAME: Record<ColorKind, string> = { red: 'あか', blue: 'あお', yellow: 'きいろ', green: 'みどり' };
@@ -64,13 +65,14 @@ export function PatternView({ puzzle: p, submit, solved, status, hintLevel }: Ga
         </div>
       </div>
       {status}
-      <div className="row center" role="group" aria-label="せんたくし">
+      <InDock>
+      <div className="row center" role="group" aria-label="せんたくし" style={{ flexWrap: 'nowrap', gap: 6 }}>
         {p.options.map((o, i) => (
           <button
             key={i}
             type="button"
             className="btn"
-            style={{ width: 84, height: 84, borderRadius: 18, borderColor: solved && sameToken(o, p.sequence[p.hidden]) ? '#1f9d6a' : undefined }}
+            style={{ flex: '1 1 0', maxWidth: 84, minWidth: 0, height: 76, padding: 0, borderRadius: 18, borderColor: solved && sameToken(o, p.sequence[p.hidden]) ? '#1f9d6a' : undefined }}
             onClick={() => submit(o)}
             disabled={solved}
           >
@@ -78,6 +80,7 @@ export function PatternView({ puzzle: p, submit, solved, status, hintLevel }: Ga
           </button>
         ))}
       </div>
+      </InDock>
     </section>
   );
 }

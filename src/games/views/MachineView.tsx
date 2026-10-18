@@ -4,6 +4,7 @@ import { parseAnswer } from '../../domain/input';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 export function MachineView({ puzzle: p, submit, solved, status }: GameViewProps<MachinePuzzle, number | null>) {
   const [value, setValue] = useState('');
@@ -35,6 +36,15 @@ export function MachineView({ puzzle: p, submit, solved, status }: GameViewProps
         {row(p.query, applyRule(p.rule, p.query), true)}
       </div>
       {status}
+      {!solved && (
+        <InDock>
+          {/* 数字キーのすぐ上にも「いれた かず」を出す（背の低い画面でも見えるように） */}
+          <div className="row center" aria-hidden>
+            <span className="num" style={{ fontSize: '1.5rem' }}>{p.query} →</span>
+            <AnswerBox value={value} small />
+          </div>
+        </InDock>
+      )}
       <NumberPad value={value} onChange={setValue} onSubmit={() => submit(parseAnswer(value))} disabled={solved} maxDigits={4} />
     </section>
   );

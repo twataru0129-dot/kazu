@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { appendDigit, keyToDigit } from '../domain/input';
 import { play } from '../audio/sfx';
+import { InDock } from './Dock';
 
 interface Props {
   value: string;
@@ -63,33 +64,43 @@ export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえ�
     return () => window.removeEventListener('keydown', onKey);
   }, [keyboard, disabled, maxDigits]);
 
+  const key = (d: string) => (
+    <button key={d} type="button" onClick={() => press(d)} aria-label={d}>
+      {d}
+    </button>
+  );
+
   const press = (d: string) => {
     play('tap');
     lastSubmit.current = 0;
     onChange(appendDigit(value, d, maxDigits));
   };
 
+  // 使えないとき（正解したあと・一時停止中）は キーを しまって、つぎの操作を 押しやすくする
+  if (disabled) return null;
+
+  // 4れつ：7 8 9 けす / 4 5 6 クリア / 1 2 3 こたえる / 0（はば ひろ）こたえる
   return (
-    <div className="pad" role="group" aria-label="すうじキー">
-      {['7', '8', '9', '4', '5', '6', '1', '2', '3'].map((d) => (
-        <button key={d} type="button" onClick={() => press(d)} disabled={disabled} aria-label={d}>
-          {d}
+    <InDock>
+      <div className={`pad ${onSubmit ? '' : 'no-submit'}`} role="group" aria-label="すうじキー">
+        {['7', '8', '9'].map((d) => key(d))}
+        <button type="button" className="pad-clear" onClick={() => onChange(value.slice(0, -1))} disabled={value === ''} aria-label="1もじ けす">
+          ← けす
         </button>
-      ))}
-      <button type="button" className="pad-clear" onClick={() => onChange(value.slice(0, -1))} disabled={disabled || value === ''} aria-label="1もじ けす">
-        ← けす
-      </button>
-      <button type="button" onClick={() => press('0')} disabled={disabled} aria-label="0">
-        0
-      </button>
-      <button type="button" className="pad-clear" onClick={() => onChange('')} disabled={disabled || value === ''} aria-label="ぜんぶ けす">
-        クリア
-      </button>
-      {onSubmit && (
-        <button type="button" className="pad-submit" onClick={submit} disabled={disabled || (!allowEmptySubmit && value === '')}>
-          {submitLabel}
+        {['4', '5', '6'].map((d) => key(d))}
+        <button type="button" className="pad-clear" onClick={() => onChange('')} disabled={value === ''} aria-label="ぜんぶ けす">
+          クリア
         </button>
-      )}
-    </div>
+        {['1', '2', '3'].map((d) => key(d))}
+        {onSubmit && (
+          <button type="button" className="pad-submit" onClick={submit} disabled={!allowEmptySubmit && value === ''}>
+            {submitLabel}
+          </button>
+        )}
+        <button type="button" className="pad-zero" onClick={() => press('0')} aria-label="0">
+          0
+        </button>
+      </div>
+    </InDock>
   );
 }

@@ -1,5 +1,61 @@
 import { Apple, Bag, Candy, ease, Kid, Plate, seg, Txt, type Scene } from '../../components/TimelinePlayer';
 
+/** 式の数と、説明の色を そろえる（2 と「1さらに ある りんごの かず」が 同じ色） */
+export const MUL_COLORS = { per: '#c0392b', groups: '#1f6fb8', total: '#6a3fb8' };
+export const DIV_COLORS = { total: '#b8306b', people: '#1f6fb8', each: '#6a3fb8' };
+
+interface EqToken {
+  text: string;
+  x: number;
+  color: string;
+  /** 説明の矢印を出すか */
+  mark?: boolean;
+}
+
+const OP = '#33475b';
+const MUL_EQ: EqToken[] = [
+  { text: '2', x: 96, color: MUL_COLORS.per, mark: true },
+  { text: '×', x: 138, color: OP },
+  { text: '3', x: 180, color: MUL_COLORS.groups, mark: true },
+  { text: '=', x: 222, color: OP },
+  { text: '6', x: 264, color: MUL_COLORS.total, mark: true },
+];
+const DIV_EQ: EqToken[] = [
+  { text: '10', x: 96, color: DIV_COLORS.total, mark: true },
+  { text: '÷', x: 144, color: OP },
+  { text: '2', x: 184, color: DIV_COLORS.people, mark: true },
+  { text: '=', x: 224, color: OP },
+  { text: '5', x: 264, color: DIV_COLORS.each, mark: true },
+];
+
+function EquationTokens({ tokens }: { tokens: EqToken[] }) {
+  return (
+    <g>
+      {tokens.map((k) => (
+        <Txt key={k.x} x={k.x} y={72} size={46} color={k.color}>
+          {k.text}
+        </Txt>
+      ))}
+    </g>
+  );
+}
+
+/** 数の下に、同じ色の丸い目印と矢印（下の説明につながる） */
+function EqArrows({ tokens, opacity }: { tokens: EqToken[]; opacity: number }) {
+  return (
+    <g opacity={opacity}>
+      {tokens
+        .filter((k) => k.mark)
+        .map((k) => (
+          <g key={k.x}>
+            <path d={`M${k.x} 84 L${k.x} 112`} stroke={k.color} strokeWidth="4" strokeLinecap="round" />
+            <path d={`M${k.x - 8} 104 L${k.x} 116 L${k.x + 8} 104`} stroke={k.color} strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+        ))}
+    </g>
+  );
+}
+
 /** 皿 i（0始まり）の x 座標（3皿・4皿で中央寄せ） */
 const plateX = (i: number, n: number) => 180 + (i - (n - 1) / 2) * 92;
 
@@ -40,7 +96,7 @@ export const MUL_SCENES: Scene[] = [
             <g key={i} opacity={a}>
               <Plate x={plateX(i, 3)} y={140} />
               <ApplesOnPlate cx={plateX(i, 3)} y={140} n={2} appear={a} />
-              <Txt x={plateX(i, 3)} y={180} size={14} color="#4b5d72" weight={700}>
+              <Txt x={plateX(i, 3)} y={186} size={17} color="#33475b" weight={800}>
                 {i + 1}さらめ
               </Txt>
             </g>
@@ -103,30 +159,26 @@ export const MUL_SCENES: Scene[] = [
         <>
           {[0, 1, 2].map((i) => (
             <g key={i}>
-              <Plate x={plateX(i, 3)} y={170} w={60} />
-              <ApplesOnPlate cx={plateX(i, 3)} y={170} n={2} />
+              <Plate x={plateX(i, 3)} y={180} w={60} />
+              <ApplesOnPlate cx={plateX(i, 3)} y={180} n={2} />
             </g>
           ))}
           <Txt x={180} y={50} size={26} opacity={1 - m}>
             2 + 2 + 2 = 6
           </Txt>
-          <Txt x={180} y={70} size={40} opacity={m} color="#7a55c8">
-            2 × 3 = 6
-          </Txt>
-          <g opacity={seg(t, 0.65, 0.85)}>
-            <Txt x={118} y={104} size={13} color="#4b5d72" weight={700}>
-              1さらの かず
-            </Txt>
-            <Txt x={178} y={104} size={13} color="#4b5d72" weight={700}>
-              さらの かず
-            </Txt>
-            <Txt x={248} y={104} size={13} color="#4b5d72" weight={700}>
-              ぜんぶ
-            </Txt>
+          <g opacity={m}>
+            <EquationTokens tokens={MUL_EQ} />
           </g>
+          <EqArrows tokens={MUL_EQ} opacity={seg(t, 0.55, 0.7)} />
         </>
       );
     },
+    // 式の すぐ下（アニメの枠の下）に 大きな文字で 出す説明
+    legend: [
+      { value: '2', color: MUL_COLORS.per, label: '1さらに ある りんごの かず', at: 0.6 },
+      { value: '3', color: MUL_COLORS.groups, label: 'おさらの かず', at: 0.7 },
+      { value: '6', color: MUL_COLORS.total, label: 'ぜんぶの りんごの かず', at: 0.8 },
+    ],
   },
   {
     dur: 12,
@@ -262,25 +314,23 @@ export const DIV_SCENES: Scene[] = [
     caption: 'これを わりざんで「10 ÷ 2 = 5」と かくよ。',
     render: (t) => (
       <>
-        <Txt x={180} y={80} size={46} color="#7a55c8">
-          10 ÷ 2 = 5
-        </Txt>
-        <g opacity={seg(t, 0.3, 0.6)}>
-          <Txt x={110} y={120} size={14} color="#4b5d72" weight={700}>
-            ぜんぶの かず
-          </Txt>
-          <Txt x={185} y={120} size={14} color="#4b5d72" weight={700}>
-            ひとの かず
-          </Txt>
-          <Txt x={258} y={120} size={14} color="#4b5d72" weight={700}>
-            ひとりぶん
-          </Txt>
-        </g>
-        <Txt x={180} y={180} size={20} opacity={seg(t, 0.65, 0.85)}>
-          10こを 2にんで おなじに わけると 5こずつ
-        </Txt>
+        <EquationTokens tokens={DIV_EQ} />
+        <EqArrows tokens={DIV_EQ} opacity={seg(t, 0.25, 0.4)} />
+        {[120, 240].map((x) => (
+          <g key={x} opacity={seg(t, 0.1, 0.3)}>
+            <Plate x={x} y={190} w={110} />
+            {Array.from({ length: 5 }, (_, s) => (
+              <Candy key={s} x={x - 40 + s * 20} y={182} s={0.6} />
+            ))}
+          </g>
+        ))}
       </>
     ),
+    legend: [
+      { value: '10', color: DIV_COLORS.total, label: 'ぜんぶの あめの かず', at: 0.35 },
+      { value: '2', color: DIV_COLORS.people, label: 'わける ひとの かず', at: 0.5 },
+      { value: '5', color: DIV_COLORS.each, label: 'ひとりぶんの あめの かず', at: 0.65 },
+    ],
   },
   {
     dur: 14,

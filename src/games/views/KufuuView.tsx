@@ -5,6 +5,7 @@ import { play } from '../../audio/sfx';
 import { NumberPad } from '../../components/NumberPad';
 import { AnswerBox } from '../../components/ui';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 export function KufuuView({ puzzle: p, submit, solved, status }: GameViewProps<KufuuPuzzle, KufuuAnswer>) {
   const [left, setLeft] = useState(p.a);
@@ -93,12 +94,14 @@ export function KufuuView({ puzzle: p, submit, solved, status }: GameViewProps<K
       {status}
       {stage === 'answer' && (
         <>
-          <div className="row center">
-            <span className="num" style={{ fontSize: '1.8rem' }}>
-              {left} + {right} =
-            </span>
-            <AnswerBox value={value} active />
-          </div>
+          <InDock>
+            <div className="row center">
+              <span className="num" style={{ fontSize: '1.8rem' }}>
+                {left} + {right} =
+              </span>
+              <AnswerBox value={value} active={!solved} label="こたえ" />
+            </div>
+          </InDock>
           <NumberPad value={value} onChange={setValue} onSubmit={() => submit({ left, right, result: parseAnswer(value) })} disabled={solved} maxDigits={4} />
           {!solved && (
             <button type="button" className="btn ghost" onClick={() => setStage('move')}>

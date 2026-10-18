@@ -3,6 +3,7 @@ import { evaluateLinear, type AddSubOp } from '../../domain/expr';
 import type { Make10Answer, Make10Puzzle } from '../../domain/games/make10';
 import { play } from '../../audio/sfx';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 export function Make10View({ puzzle: p, submit, solved, status }: GameViewProps<Make10Puzzle, Make10Answer>) {
   const [order, setOrder] = useState<string[]>([]);
@@ -59,7 +60,8 @@ export function Make10View({ puzzle: p, submit, solved, status }: GameViewProps<
         )}
       </div>
       {status}
-      <div className="row center" aria-label="てもちの カード">
+      <InDock>
+      <div className="row center" aria-label="てもちの カード" style={{ gap: 6 }}>
         {hand.map((c) => (
           <button key={c.id} type="button" className="btn num" style={{ ...cardStyle, boxShadow: '0 3px 0 #e0c3a8' }} onClick={() => add(c.id)} aria-label={`${c.value} の カード`}>
             {c.value}
@@ -82,6 +84,7 @@ export function Make10View({ puzzle: p, submit, solved, status }: GameViewProps<
           こたえる
         </button>
       </div>
+      </InDock>
     </section>
   );
 }

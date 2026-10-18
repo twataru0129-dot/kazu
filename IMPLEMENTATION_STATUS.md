@@ -1,6 +1,15 @@
-# 実装状況（v1.0）
+# 実装状況（v1.1）
 
-最終確認：2026-10-17。`npm run typecheck` / `npm run lint` / `npm test`（228件）/ `npm run build` / `npx playwright test`（16件）がすべて成功。
+最終確認：2026-10-17。`npm ci` / `npm run typecheck` / `npm run lint` / `npm test` / `npm run build` / `npx playwright test` の結果は CHANGELOG と PR に記載。
+
+## v1.1 の変更
+
+- [x] アプリアイコンを採用デザインの PNG に変更（manifest・favicon・iOS ホーム画面、dist に含まれることを確認）
+- [x] iPhone Safari で「こたえる」「つぎへ」が下に押し出される問題：操作ドックで修正（Chromium で 320×480／375×548／390×664／430×740 を自動検証。Safari 実機は未確認 → docs/SAFARI_CHECKLIST.md）
+- [x] 掛け算・割り算の説明アニメの式の説明を大きく・色分け
+- [x] まなぶのタブを横スクロールなしで全表示
+- [x] 語の途中・式の途中で改行しない
+- [x] かたちパズルの難易度・ロジックは変更なし（E2E で4難易度とも解けることを再確認）
 
 ## 4モード
 
@@ -48,7 +57,7 @@
 
 ## 未検証・制約（隠さず記載）
 
-- [ ] 実機の iPhone / iPad / Android での確認はしていません（Chromium のエミュレーションのみ）。Safari 固有の挙動（IndexedDB の削除ポリシー、音声の再生制限、ホーム画面アプリの保存領域）は README に注意書きを記載。
+- [ ] 実機の iPhone / iPad / Android での確認はしていません（Chromium のエミュレーションのみ。WebKit の Playwright は実行環境に無い）。確認手順は docs/SAFARI_CHECKLIST.md。Safari 固有の挙動（IndexedDB の削除ポリシー、音声の再生制限、ホーム画面アプリの保存領域）は README に注意書きを記載。
 - [ ] 読み上げはブラウザの日本語音声に依存します。音声がない環境では字幕のみ（機能は全て使えます）。
 - [ ] Service Worker の「新しい版があります → こうしん」の流れは手動確認が必要です（E2E ではオフライン起動のみ確認）。
 - [ ] 容量不足は `navigator.storage.estimate()` が使える環境でのみ事前に検知します。それ以外は書き込み失敗時にトランザクションを取り消して通知します。

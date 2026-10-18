@@ -33,9 +33,9 @@ export function ParentScreen() {
       </main>
     );
   return (
-    <main className="screen" style={{ maxWidth: 900 }}>
+    <main className="screen adult-text" style={{ maxWidth: 900 }}>
       <TopBar title="おとなの メニュー" onBack={() => navigate('/home')} />
-      <div className="tabs" role="tablist">
+      <div className="grid-tabs" role="tablist" style={{ ['--n' as string]: 5, ['--cols' as string]: 3 }}>
         {(
           [
             ['records', 'きろく'],

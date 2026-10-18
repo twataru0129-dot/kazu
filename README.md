@@ -116,7 +116,24 @@ e2e/              Playwright
 docs/ADDING_A_GAME.md  17個目以降のゲームの追加手順
 ```
 
-アプリ名・色・アイコンは `app.config.json`・`src/config/theme.ts`・`public/icons/icon.svg` で差し替えられます
-（PNG アイコンは `node scripts/make-icons.mjs` で SVG から作り直せます）。
+アプリ名・色は `app.config.json`・`src/config/theme.ts` で差し替えられます。
+
+### アプリアイコン
+
+- 採用デザインの原画は `assets/icon/` にあります（`kazu_app_icon_1024.png` がマスター、512・192・180px も同梱）。
+- アプリで使うのは `public/icons/app-icon-192.png`・`app-icon-512.png`（manifest・ブラウザのタブ）と `app-icon-180.png`（iPhone/iPad のホーム画面）です。対応表は `app.config.json` の `icons`。
+- 差し替えるときは `assets/icon/` の PNG を同じ大きさの新しい画像に置き換えてから `node scripts/make-icons.mjs` を実行します。
+  このスクリプトは原画を `public/icons/` へ**コピーして大きさを確認するだけ**で、絵を描き直したり別の画像から書き出したりはしません（以前の SVG からの書き出しは廃止）。
+- アイコンの中身が変わると Service Worker の版も変わるので、ホームの「こうしん する」で新しいアイコンのファイルに入れ替わります。
+
+### iPhone のホーム画面のアイコンが古いままのとき
+
+アプリ本体の更新では記録は消えませんが、iPhone のホーム画面に追加したアイコンの絵は、追加したときのものが残ることがあります。
+「サイトデータをすべて消去」はしないでください（記録が消えます）。次の順で入れ替えてください。
+
+1. ホーム画面のアプリを開き、「おとなのメニュー」→「バックアップ」で JSON を保存する（念のため）
+2. Safari で公開ページを開き、ホームの「こうしん する」が出ていれば押す
+3. ホーム画面に新しく「ホーム画面に追加」する（古いアイコンは、新しい方で記録が見えることを確認してから削除）
+4. 新しい方で記録が見えないとき（ホーム画面アプリは保存領域が別のことがあります）は、手順1のファイルを「バックアップ」→「復元（追加）」で読み込む
 
 関連ドキュメント：[DECISIONS.md](DECISIONS.md) / [CHANGELOG.md](CHANGELOG.md) / [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)

@@ -27,7 +27,8 @@ export function MazeView({ puzzle: p, submit, solved, status, reportProgress, hi
     }
   };
 
-  const size = `min(${Math.floor(100 / p.size)}%, ${Math.floor(420 / p.size)}px)`;
+  // 盤面は 横幅と「画面の高さ − 操作ドック − 問題」の どちらにも 収まる大きさ（1マス 44px 以上）
+  const size = `max(44px, min(calc((100% - ${(p.size - 1) * 6}px) / ${p.size}), ${Math.floor(420 / p.size)}px, calc((100dvh - var(--dock-h, 0px) - 220px) / ${p.size})))`;
   return (
     <section className="stack">
       <div className="card center-text">
@@ -35,7 +36,9 @@ export function MazeView({ puzzle: p, submit, solved, status, reportProgress, hi
           <div className="big-expr">ゴール！</div>
         ) : (
           <>
-            <div className="muted">こたえが かいてある となりの マスへ すすもう</div>
+            <div className="muted">
+              <span className="phrase">こたえが かいてある</span> <span className="phrase">となりの マスへ すすもう</span>
+            </div>
             <div className="big-expr">{q.text} = ?</div>
           </>
         )}

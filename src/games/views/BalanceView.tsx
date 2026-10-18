@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { correctSide, formatSide, sideValue, type BalanceAnswer, type BalancePuzzle } from '../../domain/games/balance';
 import type { GameViewProps } from '../types';
+import { InDock } from '../../components/Dock';
 
 export function BalanceView({ puzzle: p, submit, solved, status }: GameViewProps<BalancePuzzle, BalanceAnswer>) {
   const [picked, setPicked] = useState<BalanceAnswer | null>(null);
@@ -58,6 +59,7 @@ export function BalanceView({ puzzle: p, submit, solved, status }: GameViewProps
         どちらが おおきい？
       </p>
       {status}
+      <InDock>
       <div className="row center" role="group" aria-label="こたえ" style={{ flexWrap: 'nowrap', gap: 6 }}>
         {(
           [
@@ -71,6 +73,7 @@ export function BalanceView({ puzzle: p, submit, solved, status }: GameViewProps
           </button>
         ))}
       </div>
+      </InDock>
     </section>
   );
 }
