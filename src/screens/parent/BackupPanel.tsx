@@ -82,7 +82,7 @@ export function BackupPanel() {
             setMsg(ok ? { ok: true, text: `バックアップファイル（${backupFileName()}）を作成しました。保存先はブラウザのダウンロード設定によります。` } : { ok: false, text: 'バックアップを作成できませんでした。' });
           }}
         >
-          バックアップを ほぞん（JSON）
+          バックアップを保存（JSON）
         </button>
       </div>
       <div className="card stack">
@@ -90,7 +90,7 @@ export function BackupPanel() {
         <p className="small muted" style={{ margin: 0 }}>
           ファイルを選ぶと、まず中身を確認します（この時点ではまだ何も変わりません）。
         </p>
-        <input ref={fileRef} type="file" accept="application/json,.json" aria-label="バックアップファイルを えらぶ" onChange={(e) => void onFile(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept="application/json,.json" aria-label="バックアップファイルを選択" onChange={(e) => void onFile(e.target.files?.[0])} />
         {preview && !preview.ok && (
           <div className="banner" role="alert">
             <div>
@@ -144,7 +144,7 @@ export function BackupPanel() {
               <div className="banner">
                 今のデータは消えます。先に今のデータをバックアップしてください。
                 <button type="button" className="btn" onClick={() => void downloadBackup(app.repo)}>
-                  今のデータを バックアップ
+                  今のデータをバックアップ
                 </button>
               </div>
             )}

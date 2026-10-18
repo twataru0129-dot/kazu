@@ -33,5 +33,5 @@ export async function openParent(page: Page) {
   await page.mouse.down();
   await page.waitForTimeout(1500);
   await page.mouse.up();
-  await expect(page.getByRole('tab', { name: 'きろく' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '記録' })).toBeVisible();
 }

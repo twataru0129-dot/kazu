@@ -16,7 +16,7 @@ async function holdOpenParent(page: Page) {
   await page.mouse.down();
   await page.clock.runFor(1500);
   await page.mouse.up();
-  await expect(page.getByRole('tab', { name: 'きろく' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '記録' })).toBeVisible();
 }
 
 async function typePin(page: Page, pin: string) {
@@ -29,26 +29,26 @@ async function pinOpenParent(page: Page, pin = PIN) {
   await page.goto('/#/parent');
   await expect(page.getByText('あんしょうばんごう（4けた）を いれてください')).toBeVisible();
   await typePin(page, pin);
-  await expect(page.getByRole('tab', { name: 'きろく' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '記録' })).toBeVisible();
 }
 
 async function setupLimit(page: Page, minutes: number) {
   await holdOpenParent(page);
-  await page.getByRole('tab', { name: 'せってい' }).click();
+  await page.getByRole('tab', { name: '設定' }).click();
   // PIN 未設定では制限を有効にできない
-  await expect(page.getByRole('radio', { name: 'せいげん する' })).toBeDisabled();
-  await page.getByRole('button', { name: 'あんしょうばんごうを きめる' }).click();
+  await expect(page.getByRole('radio', { name: '制限する' })).toBeDisabled();
+  await page.getByRole('button', { name: '暗証番号を設定' }).click();
   await typePin(page, PIN);
   await typePin(page, '1111'); // 1回目と違う → やりなおし
-  await expect(page.getByText('1かいめと 2かいめが ちがいました')).toBeVisible();
+  await expect(page.getByText('1回目と2回目が違いました')).toBeVisible();
   await typePin(page, PIN);
   await typePin(page, PIN);
-  await expect(page.getByText('あんしょうばんごうを ほぞん しました')).toBeVisible();
-  await page.getByRole('radio', { name: 'せいげん する' }).click();
-  await expect(page.getByRole('radio', { name: '30ふん', exact: true })).toHaveAttribute('aria-checked', 'true'); // 初期は30分
-  await page.getByRole('radio', { name: `${minutes}ふん`, exact: true }).click();
-  await page.getByRole('button', { name: 'ほぞん' }).click();
-  await expect(page.getByTestId('time-limit-status')).toContainText(`1かい ${minutes}ふん`);
+  await expect(page.getByText('暗証番号を保存しました')).toBeVisible();
+  await page.getByRole('radio', { name: '制限する' }).click();
+  await expect(page.getByRole('radio', { name: '30分', exact: true })).toHaveAttribute('aria-checked', 'true'); // 初期は30分
+  await page.getByRole('radio', { name: `${minutes}分`, exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await expect(page.getByTestId('time-limit-status')).toContainText(`1回 ${minutes}分`);
 }
 
 /** アプリが表示されている時間を ms 進める（30秒ずつ） */
@@ -71,7 +71,7 @@ async function playUntilVisible(page: Page, testId: string, maxMs: number) {
 
 async function remainingText(page: Page) {
   await pinOpenParent(page);
-  await page.getByRole('tab', { name: 'せってい' }).click();
+  await page.getByRole('tab', { name: '設定' }).click();
   const t = await page.getByTestId('time-limit-status').innerText();
   return t;
 }
@@ -118,7 +118,7 @@ test('初期状態は時間制限なし。長押しで おとなのメニュー�
   await page.mouse.down();
   await page.clock.runFor(300);
   await page.mouse.up();
-  await expect(page.getByRole('tab', { name: 'きろく' })).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: '記録' })).toHaveCount(0);
   await holdOpenParent(page);
 });
 
@@ -132,7 +132,7 @@ test('30分：待機→遊ぶ→閉じて再開で残り約20分→5分前の案
   await playFor(page, 5 * MIN);
   await page.goto('/#/home');
   await playFor(page, 5 * MIN);
-  expect(await remainingText(page)).toContain('つぎに あそびはじめた ときから');
+  expect(await remainingText(page)).toContain('次に遊び始めたときから');
 
   // 計算モードで遊ぶ（記録をつくる）
   await page.goto('/#/play/sudoku');
@@ -144,11 +144,11 @@ test('30分：待機→遊ぶ→閉じて再開で残り約20分→5分前の案
   // アプリを閉じて開き直す（リロード）→ 残り約20分。30分に戻らない
   await page.reload();
   const t = await remainingText(page);
-  expect(t).toMatch(/のこり (19|20)ふん/);
+  expect(t).toMatch(/残り (19|20)分/);
 
   // おとなのメニューの間は数えない
   await playFor(page, 10 * MIN);
-  expect(await page.getByTestId('time-limit-status').innerText()).toMatch(/のこり (19|20)ふん/);
+  expect(await page.getByTestId('time-limit-status').innerText()).toMatch(/残り (19|20)分/);
 
   // 別のプロフィールに変えても 同じ のこり時間（回避できない）
   await page.goto('/#/');
@@ -199,7 +199,7 @@ test('30分：待機→遊ぶ→閉じて再開で残り約20分→5分前の案
 
   // 解除直後は 数えない（親が持っているだけでは へらない）
   await playFor(page, 10 * MIN);
-  expect(await remainingText(page)).toContain('1かい 30ふん（つぎに あそびはじめた ときから');
+  expect(await remainingText(page)).toContain('1回 30分（次に遊び始めたときから');
 
   // 記録・途中の盤面は 残っている
   expect(await readStore(page)).toEqual(before);
@@ -227,7 +227,7 @@ test('画面が非表示の間は数えない。もどると つづきから数�
   await playFor(page, 30 * MIN);
   await setVisibility('visible');
   await playFor(page, 1 * MIN);
-  expect(await remainingText(page)).toMatch(/のこり (5|6)ふん/);
+  expect(await remainingText(page)).toMatch(/残り (5|6)分/);
 });
 
 test('別のタブでも同じ制限（片方で時間切れ → もう片方もロック）', async ({ page, context }) => {
@@ -273,7 +273,7 @@ test('PIN を決めたあとは、おとなのメニューは タップ→PIN。
   await page.clock.fastForward(31_000);
   await page.waitForTimeout(100);
   await typePin(page, PIN);
-  await expect(page.getByRole('tab', { name: 'きろく' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '記録' })).toBeVisible();
 });
 
 for (const vp of [
