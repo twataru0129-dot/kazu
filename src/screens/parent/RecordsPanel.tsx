@@ -36,9 +36,9 @@ export function RecordsPanel() {
       <table className="data">
         <thead>
           <tr>
-            <th>けいさん</th>
-            <th>むずかしさ</th>
-            <th>もんだい数</th>
+            <th>計算</th>
+            <th>難しさ</th>
+            <th>問題数</th>
             <th>{label}</th>
           </tr>
         </thead>
@@ -67,7 +67,7 @@ export function RecordsPanel() {
     <div className="stack">
       <div className="card row">
         <label htmlFor="rec-profile" style={{ fontWeight: 700 }}>
-          だれの きろく？
+          表示するプロフィール
         </label>
         <select id="rec-profile" className="text-input" style={{ maxWidth: 260, minHeight: 48, fontSize: '1rem' }} value={pid} onChange={(e) => setPid(e.target.value)}>
           {app.profiles.map((p) => (
@@ -81,11 +81,11 @@ export function RecordsPanel() {
       <div className="card">
         <h2>まとめ</h2>
         <p className="small muted" style={{ marginTop: 0 }}>
-          きろくから その都度 計算しています。{MIN_SAMPLES_FOR_SUGGESTION}問以上の記録がある項目だけを「練習してみよう」「よくできている」に出します。少ない記録から得意・不得意を決めつけないためです。あそびモードの成績は学力の評価としては扱いません。
+          記録からその都度計算しています。{MIN_SAMPLES_FOR_SUGGESTION}問以上の記録がある項目だけを「練習してみよう」「よくできている」に出します。少ない記録から得意・不得意を決めつけないためです。あそびモードの成績は学力の評価としては扱いません。
         </p>
         <p style={{ margin: '4px 0' }}>
           <strong>練習してみよう：</strong>
-          {suggest.length ? suggest.map((s) => `${OP_LABEL[s.op as Op]}（${levelLabel(s.levelKey)}）`).join('、') : 'いまは とくに ありません'}
+          {suggest.length ? suggest.map((s) => `${OP_LABEL[s.op as Op]}（${levelLabel(s.levelKey)}）`).join('、') : '今は特にありません'}
         </p>
         <p style={{ margin: '4px 0' }}>
           <strong>よくできている：</strong>
@@ -94,7 +94,7 @@ export function RecordsPanel() {
       </div>
 
       <div className="card">
-        <h2>けいさんモード（1回目で正解した割合）</h2>
+        <h2>「けいさん」モード（1回目で正解した割合）</h2>
         {calcStats.length ? levelTable(calcStats, '1回目で正解') : <p className="muted">まだ記録がありません</p>}
       </div>
 
@@ -151,7 +151,7 @@ export function RecordsPanel() {
       </div>
 
       <div className="card">
-        <h2>あそび</h2>
+        <h2>「あそぶ」モード</h2>
         {games.length === 0 ? (
           <p className="muted">まだありません</p>
         ) : (
@@ -161,7 +161,7 @@ export function RecordsPanel() {
                 <tr>
                   <th>ゲーム</th>
                   <th>問題数</th>
-                  <th>できた</th>
+                  <th>クリア</th>
                   <th>ヒント</th>
                   <th>最後に遊んだ日</th>
                 </tr>
@@ -183,9 +183,9 @@ export function RecordsPanel() {
       </div>
 
       <div className="card">
-        <h2>まなび（れんしゅう）</h2>
+        <h2>「まなぶ」モード（練習）</h2>
         <p style={{ margin: 0 }}>
-          かけざん：{learning.filter((a) => a.op === 'multiply').length}問（正解 {learning.filter((a) => a.op === 'multiply' && a.finalCorrect).length}）／ わりざん：
+          かけ算：{learning.filter((a) => a.op === 'multiply').length}問（正解 {learning.filter((a) => a.op === 'multiply' && a.finalCorrect).length}）／ わり算：
           {learning.filter((a) => a.op === 'divide').length}問（正解 {learning.filter((a) => a.op === 'divide' && a.finalCorrect).length}）
         </p>
       </div>

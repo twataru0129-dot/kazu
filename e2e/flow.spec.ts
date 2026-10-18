@@ -72,7 +72,7 @@ test('first run → calc 5 → mini game → test 5 → history → JSON export'
   // JSON エクスポート
   await page.getByRole('tab', { name: 'バックアップ' }).click();
   const dl = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'バックアップを ほぞん（JSON）' }).click();
+  await page.getByRole('button', { name: 'バックアップを保存（JSON）' }).click();
   const file = await (await dl).path();
   const bundle = JSON.parse(readFileSync(file!, 'utf8'));
   expect(bundle.format).toBe('suuji-app-backup');
@@ -102,7 +102,7 @@ test('profiles A/B with the same name keep separate records; reload keeps data',
 
   // リロードしても B のまま・記録は残る。A に切り替えると A の記録だけ
   await page.reload();
-  await expect(page.getByRole('tab', { name: 'きろく' }).or(page.getByRole('button', { name: 'ボタンを ながおしして ひらく' }))).toBeVisible();
+  await expect(page.getByRole('tab', { name: '記録' }).or(page.getByRole('button', { name: 'ボタンを ながおしして ひらく' }))).toBeVisible();
   await page.goto('/#/home');
   await page.getByRole('button', { name: 'あそぶ ひとを かえる' }).click();
   await page.getByRole('listitem').filter({ hasText: 'ゆう' }).first().click();
@@ -110,7 +110,7 @@ test('profiles A/B with the same name keep separate records; reload keeps data',
   await expect(page.getByRole('navigation', { name: 'モード' })).toBeVisible();
   await expect(page.getByRole('img', { name: 'ねこ' })).toBeVisible();
   await openParent(page);
-  const select = page.getByLabel('だれの きろく？');
+  const select = page.getByLabel('表示するプロフィール');
   const options = await select.locator('option').allTextContents();
   expect(options.filter((o) => o.startsWith('ゆう'))).toHaveLength(2);
   await expect(page.locator('table').filter({ hasText: '1回目で正解' }).locator('tbody tr')).toHaveCount(1);

@@ -23,20 +23,20 @@ export function ProfilesPanel() {
             <span className="row">
               <Avatar id={p.avatarId} size={44} />
               <strong>{p.nickname}</strong>
-              {app.profile?.id === p.id && <span className="small muted">（いま あそんでいる）</span>}
+              {app.profile?.id === p.id && <span className="small muted">（使用中）</span>}
             </span>
             <span className="row">
               <button type="button" className="btn" onClick={() => setEditing(p)}>
-                へんしゅう
+                編集
               </button>
               <button type="button" className="btn danger" onClick={() => setDel({ p, step: 1 })}>
-                さくじょ
+                削除
               </button>
             </span>
           </div>
         ))}
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>
-          ＋ プロフィールを ついか
+          ＋ プロフィールを追加
         </button>
         {msg && (
           <div className="banner info" role="status">
@@ -45,10 +45,10 @@ export function ProfilesPanel() {
         )}
       </div>
       {editing && (
-        <Modal title={editing === 'new' ? 'プロフィールを ついか' : 'プロフィールを へんしゅう'} onClose={() => setEditing(null)}>
+        <Modal title={editing === 'new' ? 'プロフィールを追加' : 'プロフィールを編集'} onClose={() => setEditing(null)}>
           <ProfileForm
             initial={editing === 'new' ? undefined : editing}
-            submitLabel="ほぞん"
+            submitLabel="保存"
             onCancel={() => setEditing(null)}
             onSubmit={async (name, avatar) => {
               if (editing === 'new') await app.repo.createProfile(name, avatar);
@@ -58,23 +58,23 @@ export function ProfilesPanel() {
               }
               await app.refreshProfiles();
               setEditing(null);
-              setMsg('ほぞん しました');
+              setMsg('保存しました');
             }}
           />
         </Modal>
       )}
       {del?.step === 1 && (
         <Confirm
-          title={`「${del.p.nickname}」を さくじょ しますか？`}
+          title={`「${del.p.nickname}」を削除しますか？`}
           message={
             <div className="stack">
               <span>このプロフィールの記録・設定・途中のデータもすべて消えます。元に戻せません。</span>
-              <button type="button" className="btn" onClick={() => void downloadBackup(app.repo).then((ok) => setMsg(ok ? 'バックアップを ほぞん しました' : 'バックアップを ほぞん できませんでした'))}>
-                さきに バックアップを ほぞん する
+              <button type="button" className="btn" onClick={() => void downloadBackup(app.repo).then((ok) => setMsg(ok ? 'バックアップを保存しました' : 'バックアップを保存できませんでした'))}>
+                先にバックアップを保存する
               </button>
             </div>
           }
-          okLabel="つぎへ"
+          okLabel="次へ"
           danger
           onCancel={() => setDel(null)}
           onOk={() => setDel({ p: del.p, step: 2 })}
@@ -82,18 +82,18 @@ export function ProfilesPanel() {
       )}
       {del?.step === 2 && (
         <Confirm
-          title="ほんとうに さくじょ しますか？"
-          message={`「${del.p.nickname}」の すべての きろくが きえます。`}
-          okLabel="さくじょ する"
+          title="本当に削除しますか？"
+          message={`「${del.p.nickname}」のすべての記録が消えます。`}
+          okLabel="削除する"
           danger
           onCancel={() => setDel(null)}
           onOk={async () => {
             try {
               await app.repo.deleteProfile(del.p.id);
               await app.refreshProfiles();
-              setMsg(`「${del.p.nickname}」を さくじょ しました`);
+              setMsg(`「${del.p.nickname}」を削除しました`);
             } catch {
-              setMsg('さくじょ できませんでした');
+              setMsg('削除できませんでした');
             }
             setDel(null);
           }}

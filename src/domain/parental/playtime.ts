@@ -87,5 +87,5 @@ export function formatMinutes(ms: number): string {
   const total = Math.ceil(ms / 1000);
   const m = Math.floor(total / 60);
   const s = total % 60;
-  return s ? `${m}ふん ${s}びょう` : `${m}ふん`;
+  return s ? `${m}分${s}秒` : `${m}分`;
 }
