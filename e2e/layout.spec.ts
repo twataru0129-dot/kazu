@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createProfile } from './helpers';
 
-const GAMES = ['decompose', 'pittari', 'make10', 'kufuu', 'balance', 'sequence', 'machine', 'flash', 'numberline', 'coins', 'shopping', 'sudoku', 'maze', 'shapes', 'mirror', 'pattern'];
+const GAMES = ['decompose', 'pittari', 'make10', 'kufuu', 'balance', 'sequence', 'machine', 'flash', 'numberline', 'coins', 'shopping', 'sudoku', 'maze', 'shapes', 'mirror', 'pattern', 'missing-number', 'triangle-pattern', 'dot-connect'];
 
 for (const width of [320, 375, 390, 430, 820, 1280]) {
   test(`no horizontal page overflow and every game opens at ${width}px`, async ({ page }) => {

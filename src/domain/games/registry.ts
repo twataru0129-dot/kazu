@@ -16,6 +16,9 @@ import { maze } from './maze';
 import { shapes } from './shapes';
 import { mirror } from './mirror';
 import { pattern } from './pattern';
+import { missing } from './missing';
+import { triangle } from './triangle';
+import { dots } from './dots';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -144,6 +147,24 @@ export const GAMES: GameMeta[] = [
     description: 'かたちの ならびの きまりを みつけて、？に はいる ものを えらぼう。',
     difficultyNotes: { easy: 'ABAB', normal: 'AAB・ABC', hard: 'ABB・ABBA など', challenge: 'かたちと いろの 2つの きまり' },
     logic: pattern,
+  },
+  {
+    id: 'missing-number', no: '17', title: 'むしくい算', category: 'compare', kind: 'set', resumable: false, input: 'すうじを いれる',
+    description: 'しきの □ に はいる かずを みつけよう。',
+    difficultyNotes: { easy: '10まで・たしざん', normal: '20まで・＋−', hard: '100まで・×も', challenge: '÷・1けたの □ が 2つ' },
+    logic: missing,
+  },
+  {
+    id: 'triangle-pattern', no: '18', title: 'さんかくもよう', category: 'puzzle', kind: 'board', resumable: true, input: 'マスを タップ',
+    description: 'マスを タップすると かたちが かわるよ。みほんと おなじ もように しよう。',
+    difficultyNotes: { easy: '2×2', normal: '3×3', hard: '4×4', challenge: '5×5' },
+    logic: triangle,
+  },
+  {
+    id: 'dot-connect', no: '19', title: 'てんつなぎ', category: 'puzzle', kind: 'board', resumable: true, input: 'てんを タップ',
+    description: 'てんを 2つ じゅんに タップして せんを ひこう。みほんと おなじ かたちに できるかな？',
+    difficultyNotes: { easy: '3×3・とじた かたち', normal: '4×4・おれせん', hard: '5×5・かさなる かたち', challenge: '6×6・ふくざつ' },
+    logic: dots,
   },
 ];
 
