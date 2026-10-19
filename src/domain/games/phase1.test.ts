@@ -156,10 +156,10 @@ describe('19 dot-connect', () => {
 });
 
 describe('registry and parental limit', () => {
-  it('lists 19 games with unique ids and numbers; every game route is counted by the time limit', () => {
-    expect(GAMES).toHaveLength(19);
-    expect(new Set(GAMES.map((g) => g.id)).size).toBe(19);
-    expect(GAMES.map((g) => g.no)).toEqual(Array.from({ length: 19 }, (_, i) => String(i + 1).padStart(2, '0')));
+  it('lists the games with unique ids and consecutive numbers; every game route is counted by the time limit', () => {
+    expect(GAMES.length).toBeGreaterThanOrEqual(19);
+    expect(new Set(GAMES.map((g) => g.id)).size).toBe(GAMES.length);
+    expect(GAMES.map((g) => g.no)).toEqual(Array.from({ length: GAMES.length }, (_, i) => String(i + 1).padStart(2, '0')));
     for (const g of GAMES) {
       expect(isCountedRoute(`/play/${g.id}`)).toBe(true);
       expect(isPlayStartRoute(`/play/${g.id}`)).toBe(true);

@@ -20,9 +20,12 @@ export type GameId =
   | 'pattern'
   | 'missing-number'
   | 'triangle-pattern'
-  | 'dot-connect';
+  | 'dot-connect'
+  | 'symbol-memory'
+  | 'nonogram'
+  | 'light-sequence';
 
-export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle';
+export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 
 export interface Judgement {
   correct: boolean;

@@ -271,7 +271,11 @@ test('PIN を決めたあとは、おとなのメニューは タップ→PIN。
   await typePin(page, PIN);
   await expect(page.getByText(/まってから いれてください/)).toBeVisible();
   await page.clock.fastForward(31_000);
-  await page.waitForTimeout(100);
+  // 待ち時間が おわると 数字キーが もどる（キーボード入力も そこで受け付けはじめる）。
+  // 決まった時間（以前は 100ms）だけ待つと、遅い CI では キーが もどる前に 打ってしまうので、表示を待つ
+  await expect(page.getByText(/まってから いれてください/)).toHaveCount(0);
+  await expect(page.getByText('もう いれられます。あんしょうばんごうを いれてください。')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'すうじキー' })).toBeVisible();
   await typePin(page, PIN);
   await expect(page.getByRole('tab', { name: '記録' })).toBeVisible();
 });

@@ -30,6 +30,10 @@ export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえ�
   valueRef.current = value;
   const handlers = useRef({ onChange, onSubmit });
   handlers.current = { onChange, onSubmit };
+  // 使えない（disabled）あいだは キーを むしする。リスナーは つけたままにして、
+  // 使えるように なった しゅんかんから 受けつける（effect を まつ あいだに 打ったキーを 落とさない）
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
 
   appendRef.current = append;
   const submit = () => {
@@ -43,8 +47,9 @@ export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえ�
   submitRef.current = submit;
 
   useEffect(() => {
-    if (!keyboard || disabled) return;
+    if (!keyboard) return;
     const onKey = (e: KeyboardEvent) => {
+      if (disabledRef.current) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -67,7 +72,7 @@ export function NumberPad({ value, onChange, onSubmit, submitLabel = 'こたえ�
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [keyboard, disabled, maxDigits]);
+  }, [keyboard, maxDigits]);
 
   const key = (d: string) => (
     <button key={d} type="button" onClick={() => press(d)} aria-label={d}>

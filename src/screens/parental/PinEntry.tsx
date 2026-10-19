@@ -11,6 +11,8 @@ export function PinEntry({ onSubmit, submitLabel = 'ひらく', autoFocusLabel }
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** いま出している 知らせが「待ち時間」のものか（待ち時間が おわったら 古い知らせを 出しつづけない） */
+  const [waitNotice, setWaitNotice] = useState(false);
   const [waitUntil, setWaitUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
@@ -32,10 +34,15 @@ export function PinEntry({ onSubmit, submitLabel = 'ひらく', autoFocusLabel }
           setWaitUntil(Date.now() + r.waitMs);
           setNow(Date.now());
           setError(`まちがいが つづいたので、${Math.ceil(r.waitMs / 1000)}びょう まってから いれてください。`);
-        } else setError('ばんごうが ちがいます。もういちど いれてください。');
+          setWaitNotice(true);
+        } else {
+          setError('ばんごうが ちがいます。もういちど いれてください。');
+          setWaitNotice(false);
+        }
       }
     } catch {
       setError('たしかめられませんでした。もういちど ためしてください。');
+      setWaitNotice(false);
     } finally {
       setBusy(false);
     }
@@ -51,7 +58,7 @@ export function PinEntry({ onSubmit, submitLabel = 'ひらく', autoFocusLabel }
       {autoFocusLabel && <p className="sr-only">{autoFocusLabel}</p>}
       {error && (
         <div className="banner" role="alert">
-          {waiting ? `まちがいが つづいたので、あと ${Math.ceil((waitUntil - now) / 1000)}びょう まってから いれてください。` : error}
+          {waiting ? `まちがいが つづいたので、あと ${Math.ceil((waitUntil - now) / 1000)}びょう まってから いれてください。` : waitNotice ? 'もう いれられます。あんしょうばんごうを いれてください。' : error}
         </div>
       )}
       <NumberPad value={pin} onChange={(v) => setPin(v.slice(0, PIN_LENGTH))} onSubmit={() => void submit()} submitLabel={submitLabel} maxDigits={PIN_LENGTH} keepLeadingZeros disabled={waiting} />

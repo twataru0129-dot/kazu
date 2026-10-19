@@ -12,7 +12,7 @@ const SIZES = [
   { w: 430, h: 740 }, // Pro Max（ツールバー表示中）
 ];
 
-const GAMES = ['decompose', 'pittari', 'make10', 'kufuu', 'balance', 'sequence', 'machine', 'flash', 'numberline', 'coins', 'shopping', 'sudoku', 'maze', 'shapes', 'mirror', 'pattern'];
+const GAMES = ['decompose', 'pittari', 'make10', 'kufuu', 'balance', 'sequence', 'machine', 'flash', 'numberline', 'coins', 'shopping', 'sudoku', 'maze', 'shapes', 'mirror', 'pattern', 'missing-number', 'triangle-pattern', 'dot-connect', 'symbol-memory', 'nonogram', 'light-sequence'];
 
 async function expectDockVisible(page: Page, where: string) {
   await expect(page.locator('.dock'), `dock on ${where}`).toBeVisible();
