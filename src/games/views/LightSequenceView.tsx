@@ -146,7 +146,7 @@ export function LightSequenceView({ puzzle: p, submit, solved, status, draft, sa
     play('correct');
     setRound(round + 1);
     setPhase('ready');
-    setMessage(`できた！ つぎは ${roundLength(p, round + 1)}こ だよ`);
+    setMessage(p.rounds ? `できた！ つぎは ちがう じゅんばんで ${roundLength(p, round + 1)}こ だよ` : `できた！ つぎは ${roundLength(p, round + 1)}こ だよ`);
     persist({ round: round + 1, inputs: nextInputs, rounds: nextRounds, best: nextBest });
   };
 
