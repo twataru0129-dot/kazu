@@ -19,6 +19,9 @@ import { pattern } from './pattern';
 import { missing } from './missing';
 import { triangle } from './triangle';
 import { dots } from './dots';
+import { symbolMemory } from './symbolMemory';
+import { nonogram } from './nonogram';
+import { lightSequence } from './lightSequence';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -47,6 +50,7 @@ export const CATEGORY_LABEL: Record<GameCategory, string> = {
   compare: 'かずを くらべる・みぬく',
   life: 'くらしの さんすう',
   puzzle: 'パズル・かたち・ひらめき',
+  memory: 'きおく・しゅうちゅう',
 };
 
 export const SET_SIZE = 5;
@@ -165,6 +169,24 @@ export const GAMES: GameMeta[] = [
     description: 'てんを 2つ じゅんに タップして せんを ひこう。みほんと おなじ かたちに できるかな？',
     difficultyNotes: { easy: '3×3・とじた かたち', normal: '4×4・おれせん', hard: '5×5・かさなる かたち', challenge: '6×6・ふくざつ' },
     logic: dots,
+  },
+  {
+    id: 'symbol-memory', no: '20', title: 'きごうを おぼえよう', category: 'memory', kind: 'board', resumable: true, input: 'きごう＋マス',
+    description: 'みほんと おなじ ばしょに、おなじ きごうを おこう。むずかしいと みほんが きえるよ。',
+    difficultyNotes: { easy: '2×2・みほん いつも', normal: '3×3・みほん いつも', hard: '4×4・8びょう みる', challenge: '5×5・6びょう みる' },
+    logic: symbolMemory,
+  },
+  {
+    id: 'nonogram', no: '21', title: 'ピクロス', category: 'puzzle', kind: 'board', resumable: true, input: 'マスを ぬる',
+    description: 'よこと たての すうじは、くろく ぬる マスが いくつ ならぶか。ぜんぶ ぬると えが でてくるよ。',
+    difficultyNotes: { easy: '5×5', normal: '7×7', hard: '10×10', challenge: '12×12・よく かんがえる' },
+    logic: nonogram,
+  },
+  {
+    id: 'light-sequence', no: '22', title: 'ひかる じゅんばん', category: 'memory', kind: 'board', resumable: true, input: 'ボタンを タップ',
+    description: 'ボタンが じゅんばんに ひかるよ。ひかった じゅんに おしてね。5かい つづけると おしまい。',
+    difficultyNotes: { easy: '4こ・2→6', normal: '4こ・3→7', hard: '6こ・4→8', challenge: '9こ・6→10' },
+    logic: lightSequence,
   },
 ];
 

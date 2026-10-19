@@ -34,6 +34,7 @@ export const clock: GameLogic<ClockPuzzle, number | null> = {
 
 `GAMES` 配列に `GameMeta` を1つ追加します（番号・タイトル・カテゴリ・2文までの説明・`kind: 'set' | 'board'`・`resumable`・難易度ごとの説明・`logic`）。
 一覧画面・おとなのメニューの集計は登録表から自動で反映されます。カテゴリを増やすときは `CATEGORY_LABEL` に追加します。
+カテゴリは いま「かずを つくる・わける」「かずを くらべる・みぬく」「くらしの さんすう」「パズル・かたち・ひらめき」「きおく・しゅうちゅう（memory）」の5つです。
 
 ## 4. 画面を書く（`src/games/views/ClockView.tsx`）
 
@@ -59,3 +60,13 @@ export const clock: GameLogic<ClockPuzzle, number | null> = {
 
 `GameScreen` が自動で `StoredAttempt`（`mode: 'game'`・`gameId`・難易度・`generatorVersion`・問題と答えのスナップショット・初回正誤・最終正誤・再挑戦数・ヒント数）を保存します。
 記録の形式を変える必要はありません。将来メダル等を付けるときは、この記録から判定します。
+
+## 7. 時間を使うゲーム（見せてから かくす・光らせる など）
+
+`20 きごうを おぼえよう`・`22 ひかる じゅんばん` が参考になります。
+
+- 見せる・光らせるのは「みる」を押したときだけ。途中保存から再開したときに 自動で見せない（答えが見えてしまうのを防ぐ）
+- `visibilitychange`（hidden）と `pagehide` で タイマーを止め、「みる」待ちに戻す。画面が かくれている あいだに 時間を へらさない
+- タイマーは 再生ごとの番号（世代）を持ち、古い `setTimeout` が つぎの問題や ラウンドに 入りこまないようにする。アンマウントで すべて止める
+- 1つの盤面の中に いくつかのラウンドがあるときは `kind: 'board'` にして、ラウンドの記録は `submit` に渡す答えの中に入れる（`answerSnapshot` に のこる。DB の形は変えない）
+

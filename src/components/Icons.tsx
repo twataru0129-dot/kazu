@@ -334,6 +334,38 @@ export function GameIcon({ id }: { id: GameId }) {
             {[10, 24, 38].map((y) => [10, 24, 38].map((x) => <circle key={`${x}${y}`} cx={x} cy={y} r="3" fill="#1b2838" />))}
           </>
         );
+      case 'symbol-memory':
+        return (
+          <>
+            {[0, 1].map((r) => [0, 1].map((c) => <rect key={`${r}${c}`} x={5 + c * 20} y={5 + r * 20} width="18" height="18" rx="3" fill="#fdf6e3" stroke="#e2c98f" strokeWidth="1.5" />))}
+            <circle cx="14" cy="14" r="6" fill="none" stroke="#e8504f" strokeWidth="2.5" />
+            <path d="M28 8 L40 20 M40 8 L28 20" stroke="#1b2838" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M14 28 L21 41 H7 Z" fill="none" stroke="#2fa36b" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M34 26 L36.5 32 L43 32.3 L38 36.3 L39.7 42.5 L34 39 L28.3 42.5 L30 36.3 L25 32.3 L31.5 32 Z" fill="none" stroke="#c79a00" strokeWidth="2" strokeLinejoin="round" />
+          </>
+        );
+      case 'nonogram':
+        return (
+          <>
+            <rect x="4" y="4" width="40" height="40" rx="4" fill="#fff" stroke="#c6d6e4" />
+            {['.#.#.', '#####', '#####', '.###.', '..#..'].flatMap((row, r) =>
+              [...row].map((ch, c) => (ch === '#' ? <rect key={`${r}${c}`} x={9 + c * 6} y={13 + r * 6} width="5.4" height="5.4" fill="#1b2838" /> : null)),
+            )}
+            {t(20, 10, '1 1', 6, '#2a7fd0')}
+            {t(6, 25, '5', 6, '#2a7fd0')}
+          </>
+        );
+      case 'light-sequence':
+        return (
+          <>
+            <rect x="4" y="4" width="19" height="19" rx="5" fill="#e8504f" stroke="#1b2838" strokeWidth="2" />
+            <rect x="25" y="4" width="19" height="19" rx="5" fill="#d8e6f7" stroke="#3d7fd9" strokeWidth="2" />
+            <rect x="4" y="25" width="19" height="19" rx="5" fill="#d7efe2" stroke="#2fa36b" strokeWidth="2" />
+            <rect x="25" y="25" width="19" height="19" rx="5" fill="#fbefc4" stroke="#f2b705" strokeWidth="2" />
+            {t(13.5, 18, '1', 11, '#fff')}
+            <path d="M8 2 L4 -2 M13.5 1 V-3 M19 2 L23 -2" stroke="#f4b400" strokeWidth="2" transform="translate(0 4)" />
+          </>
+        );
     }
   })();
   return (

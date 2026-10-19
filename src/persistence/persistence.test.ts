@@ -131,6 +131,24 @@ describe('backup', () => {
     expect((await fresh.getSettings(a.id)).preferredDifficultyByGame['triangle-pattern']).toBe('hard');
   });
 
+  it('games 20〜22 (records with round details, drafts) survive export → replace import', async () => {
+    const { repo, a } = await seeded();
+    const rounds = [2, 3, 4, 5, 6].map((length) => ({ length, views: 1, retries: 0, cleared: true }));
+    await repo.saveAttempt({ ...attempt(a.id, 30, 'g2'), mode: 'game', op: undefined, gameId: 'light-sequence', questionKey: 'light', answerSnapshot: { last: { inputs: [], rounds, best: 6 }, found: [] } });
+    await repo.saveAttempt({ ...attempt(a.id, 31, 'g2'), mode: 'game', op: undefined, gameId: 'symbol-memory', questionKey: 'sym', answerSnapshot: { last: { cells: [null], reshows: 2 }, found: [] } });
+    await repo.saveAttempt({ ...attempt(a.id, 32, 'g2'), mode: 'game', op: undefined, gameId: 'nonogram', questionKey: 'heart' });
+    await repo.saveSession({ id: 'g2', profileId: a.id, mode: 'game', gameId: 'nonogram', createdAt: 'x', updatedAt: 'x', status: 'inProgress', settingsSnapshot: {}, activeDraft: { view: { cells: [[1, 2, 0]], undo: [], redo: [], mode: 'cross' } } });
+    const json = JSON.stringify(await exportBundle(repo));
+    const fresh = new Repo(memoryBackend());
+    const pv = await previewImport(fresh, json);
+    expect(pv.ok).toBe(true);
+    await applyImport(fresh, pv.bundle!, 'replace');
+    const list = await fresh.listAttempts(a.id);
+    expect(list.map((x) => x.gameId).filter(Boolean).sort()).toEqual(['light-sequence', 'nonogram', 'symbol-memory']);
+    expect((list.find((x) => x.gameId === 'light-sequence')!.answerSnapshot as { last: { rounds: unknown[] } }).last.rounds).toEqual(rounds);
+    expect((await fresh.findDraft(a.id, 'game', 'nonogram'))?.activeDraft).toEqual({ view: { cells: [[1, 2, 0]], undo: [], redo: [], mode: 'cross' } });
+  });
+
   it('merge skips duplicate IDs instead of overwriting', async () => {
     const { repo, a } = await seeded();
     const bundle = await exportBundle(repo);

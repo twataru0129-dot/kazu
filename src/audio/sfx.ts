@@ -67,3 +67,16 @@ export function play(s: Sfx) {
     /* 音が出なくても続ける */
   }
 }
+
+/** ボタンごとに ちがう 高さの音（ひかる じゅんばん）。音を けしているときは 鳴らさない */
+const NOTES = [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568];
+export function playNote(index: number, durSec = 0.3) {
+  if (!enabled) return;
+  const ac = audio();
+  if (!ac) return;
+  try {
+    tone(ac, NOTES[index % NOTES.length], 0, durSec, 'triangle', 0.12);
+  } catch {
+    /* 音が出なくても続ける */
+  }
+}
