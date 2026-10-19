@@ -22,6 +22,9 @@ import { dots } from './dots';
 import { symbolMemory } from './symbolMemory';
 import { nonogram } from './nonogram';
 import { lightSequence } from './lightSequence';
+import { netQuiz } from './netQuiz';
+import { shuffleCups } from './shuffleCups';
+import { vanishingPath } from './vanishingPath';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -187,6 +190,24 @@ export const GAMES: GameMeta[] = [
     description: 'ボタンが じゅんばんに ひかるよ。ひかった じゅんに おしてね。5かい つづけると おしまい。',
     difficultyNotes: { easy: '4こ・2→6', normal: '4こ・3→7', hard: '6こ・4→8', challenge: '9こ・6→10' },
     logic: lightSequence,
+  },
+  {
+    id: 'net-quiz', no: '23', title: 'てんかいずクイズ', category: 'puzzle', kind: 'set', resumable: false, input: 'めん・へんを タップ',
+    description: 'はこの いろの ついた めん（へん）は、てんかいずの どこに なるかな？ タップしよう。',
+    difficultyNotes: { easy: 'じゅうじの かたち・めん', normal: '5しゅるい・めん', hard: '8しゅるい・めんと へん', challenge: '11しゅるい・おもに へん' },
+    logic: netQuiz,
+  },
+  {
+    id: 'shuffle-cups', no: '24', title: 'シャッフルカップ', category: 'memory', kind: 'board', resumable: true, input: 'カップを タップ',
+    description: 'ボールの はいった カップを よく みてね。いれかわった あと、どこに あるかな？ 5かい つづけると おしまい。',
+    difficultyNotes: { easy: '3こ・2かい', normal: '3こ・4かい', hard: '4こ・6かい', challenge: '6こ・9かい・ボール2こ' },
+    logic: shuffleCups,
+  },
+  {
+    id: 'vanishing-path', no: '25', title: 'きえる みち', category: 'memory', kind: 'board', resumable: true, input: 'マスを タップ',
+    description: 'みちを おぼえてね。みちが きえたら、スタートから ゴールまで となりの マスを じゅんに おそう。5かい つづけると おしまい。',
+    difficultyNotes: { easy: '3×3・3〜4ほ', normal: '4×4・5〜6ほ', hard: '5×5・7〜8ほ', challenge: '7×7・13〜16ほ' },
+    logic: vanishingPath,
   },
 ];
 
