@@ -204,18 +204,32 @@ for (const size of SIZES) {
       }
       await page.getByRole('button', { name: 'みる', exact: true }).click();
       await expect(buttons.first()).toBeDisabled(); // みている あいだは おせない
-      const p = await readDraftPuzzle<{ sequence: number[]; startLen: number }>(page, 'light-sequence');
+      const p = await readDraftPuzzle<{ rounds: number[][]; startLen: number }>(page, 'light-sequence');
+      // 5ラウンドぶん べつべつの 順番。まえの ラウンドに 1こ 足しただけ では ない
+      expect(p.rounds.map((x) => x.length)).toEqual([2, 3, 4, 5, 6]);
+      for (let k = 1; k < 5; k++) expect(p.rounds[k].slice(0, k + 1)).not.toEqual(p.rounds[k - 1]);
       await page.clock.runFor(6000);
       // まちがえる
-      const wrong = (p.sequence[0] + 1) % 4;
+      const wrong = (p.rounds[0][0] + 1) % 4;
       await page.getByRole('button', { name: LIGHT_NAMES[wrong], exact: true }).click();
       await expect(page.getByTestId('light-message')).toContainText('もういちど');
       await expect(page.getByText('ラウンド 1／5')).toBeVisible();
       for (let k = 0; k < 5; k++) {
+        if (k === 2) {
+          // とちゅうで 読みこみなおしても 同じ 順番の つづきから
+          await page.waitForTimeout(450);
+          await page.reload();
+          await page.goto('/#/play');
+          await page.goto('/#/play/light-sequence');
+          await page.getByRole('button', { name: 'つづきから' }).click();
+          await expect(page.getByText('ラウンド 3／5')).toBeVisible();
+          expect((await readDraftPuzzle<{ rounds: number[][] }>(page, 'light-sequence')).rounds).toEqual(p.rounds);
+        }
         await page.getByRole('button', { name: /みる$/ }).click();
         await page.clock.runFor(15000);
         await expect(page.getByTestId('light-message')).toHaveText('ひかった じゅんに おしてね');
-        for (const b of p.sequence.slice(0, p.startLen + k)) await page.getByRole('button', { name: LIGHT_NAMES[b], exact: true }).click();
+        for (const b of p.rounds[k]) await page.getByRole('button', { name: LIGHT_NAMES[b], exact: true }).click();
+        if (k < 4) await expect(page.getByTestId('light-message')).toHaveText(`できた！ つぎは ちがう じゅんばんで ${k + 3}こ だよ`);
       }
       const grid = (await page.getByRole('group', { name: 'ひかる ボタン' }).boundingBox())!;
       const b = await band(page);

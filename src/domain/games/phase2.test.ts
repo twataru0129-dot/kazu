@@ -163,41 +163,93 @@ describe('21 nonogram', () => {
 });
 
 describe('22 light-sequence', () => {
-  it('each round keeps the earlier order and adds exactly one at the end', () => {
+  const V1: LightSequencePuzzle = { buttons: 4, startLen: 2, sequence: [0, 2, 1, 3, 0, 2], onMs: 1000, gapMs: 300 };
+
+  it('4 levels × 500 seeds: valid v2 puzzles, 5 independent rounds with the promised lengths', () => {
+    let sharedHead = 0;
+    let total = 0;
     for (const d of DIFFICULTIES)
       for (let s = 1; s <= 500; s++) {
-        const p = gen<LightSequencePuzzle>(lightSequence, s, d);
+        const res = generatePuzzle(lightSequence, createRng(s), d);
+        expect(res.fromFallback).toBe(false);
+        const p = res.puzzle as LightSequencePuzzle;
         const r = LIGHT_RULES[d];
+        expect(lightSequence.validate(p, d)).toBeNull();
+        expect(p.sequence).toBeUndefined();
         expect(p.buttons).toBe(r.buttons);
-        expect(roundLength(p, 0)).toBe(r.startLen);
-        expect(roundLength(p, LIGHT_ROUNDS - 1)).toBe(r.startLen + 4);
-        for (let k = 1; k < LIGHT_ROUNDS; k++) {
-          const prev = roundSequence(p, k - 1);
+        expect(p.rounds).toHaveLength(LIGHT_ROUNDS);
+        for (let k = 0; k < LIGHT_ROUNDS; k++) {
           const cur = roundSequence(p, k);
-          expect(cur.length).toBe(prev.length + 1);
-          expect(cur.slice(0, prev.length)).toEqual(prev);
+          expect(cur).toHaveLength(r.startLen + k);
+          expect(roundLength(p, k)).toBe(r.startLen + k);
+          expect(cur.every((b) => b >= 0 && b < r.buttons)).toBe(true);
+          if (!r.allowRepeat) for (let i = 1; i < cur.length; i++) expect(cur[i]).not.toBe(cur[i - 1]);
+          for (let i = 2; i < cur.length; i++) expect(cur[i] === cur[i - 1] && cur[i] === cur[i - 2]).toBe(false);
+          if (k > 0) {
+            const prev = roundSequence(p, k - 1);
+            // まえのラウンド ＋ 1こ ではない
+            expect(cur.slice(0, prev.length)).not.toEqual(prev);
+            for (let j = 0; j < k; j++) {
+              total++;
+              if (cur[0] === p.rounds![j][0] && cur[1] === p.rounds![j][1]) sharedHead++;
+            }
+          }
         }
-        if (!r.allowRepeat) for (let i = 1; i < p.sequence.length; i++) expect(p.sequence[i]).not.toBe(p.sequence[i - 1]);
       }
+    // 先頭の 2こも ほとんど それまでの ラウンドと ちがう
+    expect(sharedHead / total).toBeLessThan(0.01);
     // むずかしい以上では 同じボタンが つづく 出題も ある
     let repeats = 0;
     for (let s = 1; s <= 200; s++) {
       const p = gen<LightSequencePuzzle>(lightSequence, s, 'hard');
-      if (p.sequence.some((b, i) => i > 0 && b === p.sequence[i - 1])) repeats++;
+      if (p.rounds!.some((seq) => seq.some((b, i) => i > 0 && b === seq[i - 1]))) repeats++;
     }
     expect(repeats).toBeGreaterThan(0);
   });
 
-  it('input check is prefix-based; playback leaves a dark gap between lights', () => {
-    const p: LightSequencePuzzle = { buttons: 4, startLen: 2, sequence: [0, 2, 1, 3, 0, 2], onMs: 1000, gapMs: 300 };
+  it('the same seed gives the same 5 rounds; different seeds differ', () => {
+    for (const d of DIFFICULTIES)
+      for (let s = 1; s <= 50; s++) {
+        const a = gen<LightSequencePuzzle>(lightSequence, s, d);
+        const b = gen<LightSequencePuzzle>(lightSequence, s, d);
+        expect(b.rounds).toEqual(a.rounds);
+        expect(lightSequence.key(b)).toBe(lightSequence.key(a));
+      }
+    const keys = new Set(Array.from({ length: 50 }, (_, s) => lightSequence.key(gen<LightSequencePuzzle>(lightSequence, s + 1, 'normal'))));
+    expect(keys.size).toBeGreaterThan(45);
+  });
+
+  it('validate rejects a round that is just the previous round plus one, and v1 puzzles for new play', () => {
+    const p = gen<LightSequencePuzzle>(lightSequence, 4, 'easy');
+    const grown = { ...p, rounds: p.rounds!.map((x) => [...x]) };
+    const used = new Set(grown.rounds[0]);
+    grown.rounds[1] = [...grown.rounds[0], [0, 1, 2, 3].find((b) => !used.has(b))!];
+    expect(lightSequence.validate(grown, 'easy')).toMatch(/round 2: extends previous round/);
+    const short = { ...p, rounds: p.rounds!.slice(0, 4) };
+    expect(lightSequence.validate(short, 'easy')).toBe('rounds');
+    expect(lightSequence.validate(V1, 'easy')).toBe('rounds');
+    expect(lightSequence.generatorVersion).toBe(2);
+  });
+
+  it('input check and playback use each round its own order', () => {
+    const p: LightSequencePuzzle = { buttons: 4, startLen: 2, rounds: [[0, 2], [3, 1, 0], [1, 3, 2, 0], [2, 0, 3, 1, 2], [3, 0, 1, 2, 3, 1]], onMs: 1000, gapMs: 300 };
+    expect(lightSequence.validate(p, 'easy')).toBeNull();
     expect(checkInput(p, 0, [0])).toBe('ok');
     expect(checkInput(p, 0, [0, 2])).toBe('done');
     expect(checkInput(p, 0, [2])).toBe('wrong');
-    expect(checkInput(p, 2, [0, 2, 1])).toBe('ok');
-    expect(checkInput(p, 2, [0, 2, 1, 3])).toBe('done');
-    const sched = playbackSchedule(p, 1);
-    expect(sched.map((x) => x.button)).toEqual([0, 2, 1]);
-    for (let i = 1; i < sched.length; i++) expect(sched[i].at - sched[i - 1].at).toBe(p.onMs + p.gapMs);
+    // まえのラウンドの順番で おしても まちがい
+    expect(checkInput(p, 1, [0, 2])).toBe('wrong');
+    expect(checkInput(p, 1, [3, 1])).toBe('ok');
+    expect(checkInput(p, 1, [3, 1, 0])).toBe('done');
+    expect(checkInput(p, 1, [3, 1, 0, 2])).toBe('wrong');
+    for (let k = 0; k < LIGHT_ROUNDS; k++) {
+      const sched = playbackSchedule(p, k);
+      expect(sched.map((x) => x.button)).toEqual(p.rounds![k]);
+      for (let i = 1; i < sched.length; i++) expect(sched[i].at - sched[i - 1].at).toBe(p.onMs + p.gapMs);
+    }
+    // 何回 よんでも 同じ（見なおし・やりなおしで かわらない）
+    expect(playbackSchedule(p, 2)).toEqual(playbackSchedule(p, 2));
+    expect(roundSequence(p, 2)).toEqual([1, 3, 2, 0]);
   });
 
   it('judge needs all 5 rounds in order; per-round records ride along', () => {
@@ -209,15 +261,31 @@ describe('22 light-sequence', () => {
     const wrong = inputs.map((x) => [...x]);
     wrong[2][1] = (wrong[2][1] + 1) % p.buttons;
     expect(lightSequence.judge(p, { inputs: wrong, rounds, best: 5 }).correct).toBe(false);
-    // ちがう順番（作り直した並び）では 正解に ならない
-    const other = inputs.map((x) => [...x].reverse());
-    expect(lightSequence.judge(p, { inputs: other, rounds, best: 7 }).correct).toBe(false);
+    // まえのラウンドに 1こ 足した順番（むかしの きまり）では 正解に ならない
+    const grown = inputs.map((x, k) => (k === 0 ? x : [...inputs[k - 1], x.at(-1)!]));
+    expect(lightSequence.judge(p, { inputs: grown, rounds, best: 7 }).correct).toBe(false);
   });
 
-  it('the 3rd hint names only the next button, not the whole order', () => {
+  it('hints: say it aloud, it is a new order every round, then the next button only', () => {
     const p = gen<LightSequencePuzzle>(lightSequence, 9, 'challenge');
-    const h = lightSequence.hints(p, { round: 1, input: [p.sequence[0], p.sequence[1]] });
+    const seq = roundSequence(p, 1);
+    const h = lightSequence.hints(p, { round: 1, input: [seq[0], seq[1]] });
+    expect(h[0]).toBe('ひかった ボタンの マークを こえに だして おぼえよう');
+    expect(h[1]).toBe('まえとは ちがう じゅんばんだよ。はじめから おぼえよう');
     expect(h[2]).toBe('3ばんめに おす ボタンが ひかるよ');
+    expect(h.join('')).not.toMatch(/ふえる|おなじ じゅんばん/);
+  });
+
+  it('v1 puzzles (one shared sequence) still play: prefix rounds, judge, key', () => {
+    expect(roundSequence(V1, 0)).toEqual([0, 2]);
+    expect(roundSequence(V1, 4)).toEqual([0, 2, 1, 3, 0, 2]);
+    expect(checkInput(V1, 2, [0, 2, 1, 3])).toBe('done');
+    expect(playbackSchedule(V1, 1).map((x) => x.button)).toEqual([0, 2, 1]);
+    const inputs = Array.from({ length: LIGHT_ROUNDS }, (_, k) => roundSequence(V1, k));
+    expect(lightSequence.judge(V1, { inputs, rounds: [], best: 6 }).correct).toBe(true);
+    expect(lightSequence.judge(V1, { inputs: inputs.slice(0, 3), rounds: [], best: 4 }).message).toBe('4こ まで できたよ');
+    expect(lightSequence.key(V1)).toBe('4:021302');
+    expect(lightSequence.hints(V1, { round: 2, input: [0] })[2]).toBe('2ばんめに おす ボタンが ひかるよ');
   });
 });
 

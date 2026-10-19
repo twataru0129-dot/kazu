@@ -176,7 +176,8 @@ describe('21 ピクロス', () => {
 });
 
 describe('22 ひかる じゅんばん', () => {
-  const p: LightSequencePuzzle = { buttons: 4, startLen: 2, sequence: [0, 2, 1, 3, 0, 2], onMs: 1000, gapMs: 300 };
+  const p: LightSequencePuzzle = { buttons: 4, startLen: 2, rounds: [[0, 2], [3, 1, 0], [1, 3, 2, 0], [2, 0, 3, 1, 2], [3, 0, 1, 2, 3, 1]], onMs: 1000, gapMs: 300 };
+  const V1: LightSequencePuzzle = { buttons: 4, startLen: 2, sequence: [0, 2, 1, 3, 0, 2], onMs: 1000, gapMs: 300 };
   const NAMES = ['あかの まる', 'あおの さんかく', 'みどりの しかく', 'きいろの ほし'];
   const btn = (b: number) => screen.getByRole('button', { name: NAMES[b] });
   const watchAll = async () => {
@@ -184,6 +185,24 @@ describe('22 ひかる じゅんばん', () => {
     await act(async () => {
       vi.advanceTimersByTime(20000);
     });
+  };
+  /** 「みる」を おして、光った ボタンを 順に あつめる */
+  const watchLit = async (n: number) => {
+    fireEvent.click(screen.getByRole('button', { name: /みる$/ }));
+    const seen: number[] = [];
+    await act(async () => {
+      vi.advanceTimersByTime(500);
+    });
+    for (let i = 0; i < n; i++) {
+      seen.push(NAMES.indexOf(document.querySelector('[data-lit="true"]')?.getAttribute('aria-label') ?? ''));
+      await act(async () => {
+        vi.advanceTimersByTime(p.onMs + p.gapMs);
+      });
+    }
+    await act(async () => {
+      vi.advanceTimersByTime(20000);
+    });
+    return seen;
   };
 
   it('みている あいだは おせない。5ラウンド、まちがえたら 同じラウンドを もういちど。さいごに 1回だけ 正解', async () => {
@@ -216,6 +235,40 @@ describe('22 ひかる じゅんばん', () => {
     expect(ans.best).toBe(6);
     expect(ans.rounds[0]).toEqual({ length: 2, views: 2, retries: 1, cleared: true });
     expect(ans.rounds.slice(1).every((x) => x.views === 1 && x.retries === 0 && x.cleared)).toBe(true);
+  });
+
+  it('ラウンドごとに その ラウンドの 順番で 光る。見なおし・まちがいの あとも 同じ 順番', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const r = await renderView('light-sequence', p);
+    for (let k = 0; k < LIGHT_ROUNDS; k++) {
+      const seq = p.rounds![k];
+      expect(await watchLit(seq.length)).toEqual(seq);
+      // もういちど みても かわらない
+      expect(await watchLit(seq.length)).toEqual(seq);
+      // まちがえて やりなおしても かわらない
+      fireEvent.click(btn((seq[0] + 1) % 4));
+      expect(screen.getByText(`ラウンド ${k + 1}／5`)).toBeInTheDocument();
+      expect(await watchLit(seq.length)).toEqual(seq);
+      for (const b of seq) fireEvent.click(btn(b));
+      if (k < LIGHT_ROUNDS - 1) expect(screen.getByTestId('light-message').textContent).toBe(`できた！ つぎは ちがう じゅんばんで ${seq.length + 1}こ だよ`);
+    }
+    expect(r.results.at(-1)?.correct).toBe(true);
+    const ans = r.submit.mock.calls.at(-1)![0] as LightSequenceAnswer;
+    expect(ans.inputs).toEqual(p.rounds);
+    expect(ans.rounds.every((x) => x.views === 3 && x.retries === 1 && x.cleared)).toBe(true);
+  });
+
+  it('むかしの 形（1本の 順番）の 途中保存も そのまま つづきから 遊べる', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const rounds = [2, 3, 4, 5, 6].map((length, k) => ({ length, views: k < 3 ? 1 : 0, retries: 0, cleared: k < 3 }));
+    const r = await renderView('light-sequence', V1, { draft: { round: 3, rounds, inputs: [0, 1, 2].map((k) => roundSequence(V1, k)), best: 4 } });
+    expect(screen.getByText('ラウンド 4／5')).toBeInTheDocument();
+    for (const k of [3, 4]) {
+      expect(await watchLit(k + 2)).toEqual(V1.sequence!.slice(0, k + 2));
+      for (const b of roundSequence(V1, k)) fireEvent.click(btn(b));
+    }
+    expect(r.results.at(-1)?.correct).toBe(true);
+    expect((r.submit.mock.calls.at(-1)![0] as LightSequenceAnswer).best).toBe(6);
   });
 
   it('みている とちゅうで 画面が かくれたら とめて「みる」待ちに（もどっても 自動で 光らない）', async () => {
