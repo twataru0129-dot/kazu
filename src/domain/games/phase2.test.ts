@@ -291,12 +291,12 @@ describe('22 light-sequence', () => {
 
 describe('registry: 22 games and the memory category', () => {
   it('20〜22 are registered with stable ids; memory category holds 20 and 22', () => {
-    expect(GAMES.map((g) => g.id).slice(19)).toEqual(['symbol-memory', 'nonogram', 'light-sequence']);
+    expect(GAMES.map((g) => g.id).slice(19, 22)).toEqual(['symbol-memory', 'nonogram', 'light-sequence']);
     expect(GAME_BY_ID['symbol-memory'].no).toBe('20');
     expect(GAME_BY_ID.nonogram.no).toBe('21');
     expect(GAME_BY_ID['light-sequence'].no).toBe('22');
     expect(CATEGORY_LABEL.memory).toBe('きおく・しゅうちゅう');
-    expect(GAMES.filter((g) => g.category === 'memory').map((g) => g.id)).toEqual(['symbol-memory', 'light-sequence']);
+    expect(GAMES.filter((g) => g.category === 'memory').map((g) => g.id)).toEqual(['symbol-memory', 'light-sequence', 'shuffle-cups', 'vanishing-path']);
     expect(GAME_BY_ID.nonogram.category).toBe('puzzle');
     for (const id of ['symbol-memory', 'nonogram', 'light-sequence'] as const) {
       expect(GAME_BY_ID[id].kind).toBe('board');

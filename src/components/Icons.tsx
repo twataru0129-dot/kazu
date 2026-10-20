@@ -366,6 +366,43 @@ export function GameIcon({ id }: { id: GameId }) {
             <path d="M8 2 L4 -2 M13.5 1 V-3 M19 2 L23 -2" stroke="#f4b400" strokeWidth="2" transform="translate(0 4)" />
           </>
         );
+      case 'net-quiz':
+        return (
+          <>
+            {[
+              [1, 0],
+              [0, 1],
+              [1, 1],
+              [2, 1],
+              [3, 1],
+              [1, 2],
+            ].map(([c, r]) => (
+              <rect key={`${c}${r}`} x={4 + c * 10} y={9 + r * 10} width="10" height="10" fill={c === 1 && r === 1 ? '#ef7d57' : '#fdf6e3'} stroke="#1b2838" strokeWidth="1.5" />
+            ))}
+            <path d="M30 4 L40 4 L46 9 L36 9 Z" fill="#fdf6e3" stroke="#1b2838" strokeWidth="1.2" />
+            <path d="M30 4 V14 L36 19 V9 Z" fill="#ef7d57" stroke="#1b2838" strokeWidth="1.2" />
+            <path d="M36 9 H46 V19 H36 Z" fill="#e6eef6" stroke="#1b2838" strokeWidth="1.2" />
+          </>
+        );
+      case 'shuffle-cups':
+        return (
+          <>
+            <path d="M14 38 C14 30 22 30 22 38" fill="none" stroke="#2a7fd0" strokeWidth="2.5" strokeDasharray="3 3" />
+            {[4, 18, 32].map((x, i) => (
+              <path key={x} d={`M${x + 2} ${i === 1 ? 10 : 18} L${x + 10} ${i === 1 ? 10 : 18} L${x + 12} ${i === 1 ? 30 : 38} L${x} ${i === 1 ? 30 : 38} Z`} fill="#c0584c" stroke="#1b2838" strokeWidth="1.8" strokeLinejoin="round" />
+            ))}
+            <circle cx="24" cy="39" r="5" fill="#e8504f" stroke="#1b2838" strokeWidth="1.5" />
+          </>
+        );
+      case 'vanishing-path':
+        return (
+          <>
+            {[0, 1, 2].map((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={5 + c * 13} y={5 + r * 13} width="12" height="12" rx="2" fill="#f3f7fb" stroke="#c6d6e4" />))}
+            <path d="M11 11 H37 V24 H24 V37" fill="none" stroke="#2a7fd0" strokeWidth="3" strokeDasharray="4 3" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="11" cy="11" r="4" fill="#2fa36b" />
+            <path d="M20 33 L28 33 L24 41 Z" fill="#f4b400" stroke="#1b2838" strokeWidth="1.2" />
+          </>
+        );
     }
   })();
   return (

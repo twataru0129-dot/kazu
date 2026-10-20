@@ -23,7 +23,10 @@ export type GameId =
   | 'dot-connect'
   | 'symbol-memory'
   | 'nonogram'
-  | 'light-sequence';
+  | 'light-sequence'
+  | 'net-quiz'
+  | 'shuffle-cups'
+  | 'vanishing-path';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 

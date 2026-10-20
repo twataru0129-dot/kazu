@@ -22,6 +22,9 @@ import { DotsView } from './views/DotsView';
 import { SymbolMemoryView } from './views/SymbolMemoryView';
 import { NonogramView } from './views/NonogramView';
 import { LightSequenceView } from './views/LightSequenceView';
+import { NetQuizView } from './views/NetQuizView';
+import { ShuffleCupsView } from './views/ShuffleCupsView';
+import { VanishingPathView } from './views/VanishingPathView';
 
 /** ゲームID → ゲーム固有の画面。ドメインの登録表（registry）と対になる。 */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,4 +51,7 @@ export const GAME_VIEWS: Record<GameId, ComponentType<any>> = {
   'symbol-memory': SymbolMemoryView,
   nonogram: NonogramView,
   'light-sequence': LightSequenceView,
+  'net-quiz': NetQuizView,
+  'shuffle-cups': ShuffleCupsView,
+  'vanishing-path': VanishingPathView,
 };
