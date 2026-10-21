@@ -49,6 +49,8 @@ export function statsByLevel(attempts: StoredAttempt[], sessions: Session[], mod
   const map = new Map<string, LevelStat>();
   for (const a of attempts) {
     if (!modes.includes(a.mode as 'calculation' | 'test') || !a.op || !a.levelKey) continue;
+    // 100マス計算（gameId つき）は 1まいの 盤を 1件として べつに 数える（ふつうの 計算の 正答率に まぜない）
+    if (a.gameId) continue;
     if (a.mode === 'test' && !done.has(a.sessionId)) continue;
     if (a.skipped && a.mode === 'calculation') continue;
     const key = `${a.op}|${a.levelKey}`;

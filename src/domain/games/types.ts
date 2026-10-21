@@ -26,7 +26,9 @@ export type GameId =
   | 'light-sequence'
   | 'net-quiz'
   | 'shuffle-cups'
-  | 'vanishing-path';
+  | 'vanishing-path'
+  | 'clock-master'
+  | 'number-hunt';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 

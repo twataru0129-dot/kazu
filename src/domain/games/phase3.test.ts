@@ -416,9 +416,9 @@ describe('25 vanishing-path', () => {
 
 describe('registry: 25 games', () => {
   it('23〜25 を つづきの 番号で 登録。きおく・パズルの カテゴリを つかう', () => {
-    expect(GAMES).toHaveLength(25);
-    expect(GAMES.map((g) => g.id).slice(22)).toEqual(['net-quiz', 'shuffle-cups', 'vanishing-path']);
-    expect(GAMES.map((g) => g.no).slice(22)).toEqual(['23', '24', '25']);
+    expect(GAMES.length).toBeGreaterThanOrEqual(25);
+    expect(GAMES.map((g) => g.id).slice(22, 25)).toEqual(['net-quiz', 'shuffle-cups', 'vanishing-path']);
+    expect(GAMES.map((g) => g.no).slice(22, 25)).toEqual(['23', '24', '25']);
     expect(GAME_BY_ID['net-quiz']).toMatchObject({ category: 'puzzle', kind: 'set', resumable: false });
     expect(GAME_BY_ID['shuffle-cups']).toMatchObject({ category: 'memory', kind: 'board', resumable: true });
     expect(GAME_BY_ID['vanishing-path']).toMatchObject({ category: 'memory', kind: 'board', resumable: true });

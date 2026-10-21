@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../app/AppContext';
 import { levelLabel } from '../../domain/arithmetic/problems';
+import { bestGridTime, GRID_CALC_ID, GRID_DIFF_LABEL, type GridSummary } from '../../domain/arithmetic/gridCalc';
+import { DIFFICULTY_LABEL } from '../../domain/types';
 import { GAME_BY_ID, isGameId } from '../../domain/games/registry';
 import { describeSettings, formatMs } from '../../domain/tests/scoring';
 import { completedTests, practiceSuggestions, previousSame, statsByGame, statsByLevel, strengths, MIN_SAMPLES_FOR_SUGGESTION } from '../../domain/tests/stats';
@@ -28,6 +30,11 @@ export function RecordsPanel() {
   const games = useMemo(() => statsByGame(attempts), [attempts]);
   const tests = useMemo(() => completedTests(sessions), [sessions]);
   const learning = attempts.filter((a) => a.mode === 'learning');
+  // 100マス計算：1まいの 盤を 1件として 別に 表示（ふつうの 計算の 統計には まぜない）
+  const grids = useMemo(
+    () => sessions.filter((x) => x.gameId === GRID_CALC_ID && x.status === 'completed' && x.summary).map((x) => ({ at: x.completedAt, s: x.summary as GridSummary })),
+    [sessions],
+  );
   const suggest = practiceSuggestions(allStats);
   const good = strengths(allStats);
 
@@ -96,6 +103,54 @@ export function RecordsPanel() {
       <div className="card">
         <h2>「けいさん」モード（1回目で正解した割合）</h2>
         {calcStats.length ? levelTable(calcStats, '1回目で正解') : <p className="muted">まだ記録がありません</p>}
+      </div>
+
+      <div className="card">
+        <h2>100マス計算（マスけいさん）</h2>
+        <p className="small muted" style={{ marginTop: 0 }}>
+          1枚の表を1回として記録します（上の「けいさん」モードの正答率には含めません）。時間はタイマーを表示したときだけ記録し、自己ベストは同じ条件で、初回の答え合わせで全問正解した記録どうしで比べます。
+        </p>
+        {grids.length === 0 ? (
+          <p className="muted">まだ記録がありません</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="data" data-testid="grid-records">
+              <thead>
+                <tr>
+                  <th>日時</th>
+                  <th>条件</th>
+                  <th>初回の正答率</th>
+                  <th>直した回数</th>
+                  <th>時間</th>
+                  <th>同条件の自己ベスト</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...grids].reverse().map(({ at, s }, i) => {
+                  const best = bestGridTime(
+                    grids.map((g) => g.s),
+                    s.difficulty,
+                    s.op,
+                  );
+                  return (
+                    <tr key={i}>
+                      <td>{fmtDate(at)}</td>
+                      <td>
+                        {DIFFICULTY_LABEL[s.difficulty]} {GRID_DIFF_LABEL[s.difficulty]}・{OP_LABEL[s.op]}
+                      </td>
+                      <td>
+                        {s.firstCorrect}/{s.cells}（{Math.round((s.firstCorrect / s.cells) * 100)}%）
+                      </td>
+                      <td>{s.fixes}</td>
+                      <td>{s.timerOn ? formatMs(s.activeMs) : '—'}</td>
+                      <td>{best !== null ? formatMs(best) : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="card">

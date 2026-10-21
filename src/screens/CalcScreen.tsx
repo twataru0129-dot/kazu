@@ -25,6 +25,7 @@ import { OP_LABEL, OP_SYMBOL, type Op } from '../domain/types';
 import { nowIso } from '../persistence/repo';
 import type { Session, StoredAttempt } from '../persistence/types';
 import { MODES } from '../config/theme';
+import { CalcModeTabs } from './GridCalcScreen';
 
 type Count = 5 | 10 | 20 | 0; // 0 = ずっと
 
@@ -131,7 +132,7 @@ interface Q {
 
 export function CalcScreen() {
   const { profile, settings, repo, updateSettings } = useProfile();
-  const saved = settings.lastCalcSettings as { arith?: ArithSettings; count?: Count } | undefined;
+  const saved = settings.lastCalcSettings as { arith?: ArithSettings; count?: Count; grid?: unknown } | undefined;
   const [arith, setArith] = useState<ArithSettings>(saved?.arith ?? DEFAULT_ARITH_SETTINGS);
   const [count, setCount] = useState<Count>(saved?.count ?? 5);
   const [stage, setStage] = useState<'setup' | 'play' | 'result'>('setup');
@@ -158,7 +159,8 @@ export function CalcScreen() {
   };
 
   const start = () => {
-    void updateSettings({ lastCalcSettings: { arith, count } }).catch(() => undefined);
+    // マスけいさんの せってい（grid）は のこす
+    void updateSettings({ lastCalcSettings: { ...(saved ?? {}), arith, count } }).catch(() => undefined);
     session.current = { id: newId(), profileId: profile.id, mode: 'calculation', createdAt: nowIso(), updatedAt: nowIso(), status: 'inProgress', settingsSnapshot: { arith, count } };
     void repo.saveSession(session.current).catch(() => undefined);
     setIndex(0);
@@ -243,6 +245,7 @@ export function CalcScreen() {
     return (
       <main className="screen narrow" style={accent}>
         <TopBar title="けいさん" onBack={() => navigate('/home')} right={<SoundToggle />} />
+        <CalcModeTabs current="calc" />
         <div className="card">
           <ArithSettingsForm value={arith} onChange={setArith} />
           <span className="field-label">もんだいの かず</span>

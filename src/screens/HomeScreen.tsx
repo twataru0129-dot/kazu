@@ -6,6 +6,7 @@ import { Avatar } from '../components/Avatar';
 import { IconGear, IconSwitch, ModeIcon } from '../components/Icons';
 import { SoundToggle } from '../components/ui';
 import { APP_NAME, MODES, type ModeKey } from '../config/theme';
+import { APP_VERSION, formatVersion } from '../app/version';
 
 export function HomeScreen() {
   const { profile } = useProfile();
@@ -70,6 +71,10 @@ export function HomeScreen() {
       <p className="center-text small muted" style={{ marginTop: 'auto' }}>
         {parental.config.enabled ? 'おうちの ひとと きめた じかんまで あそぼうね。' : 'じかんの せいげんは ないよ。ゆっくり かんがえよう。'}
       </p>
+      {/* アプリの 版（画面の 中の ふつうの フッター。固定配置に しないので ボタンに かさならない） */}
+      <footer className="app-version" data-testid="home-version" aria-label={`アプリの バージョン ${formatVersion(APP_VERSION)}`}>
+        {formatVersion(APP_VERSION)}
+      </footer>
     </main>
   );
 }
