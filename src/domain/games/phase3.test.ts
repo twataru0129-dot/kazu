@@ -26,7 +26,7 @@ import {
   type Side,
   type Vec,
 } from './netQuiz';
-import { arrangementAfter, CUP_ROUNDS, CUP_RULES, CUP_SWAP_MS_V1, movesOf, positionOf, shuffleCups, type ShuffleCupsPuzzle } from './shuffleCups';
+import { arrangementAfter, CUP_ROUNDS, CUP_RULES, CUP_SWAP_MS_V1, CUP_SWAP_MS_V2, movesOf, positionOf, shuffleCups, type ShuffleCupsPuzzle } from './shuffleCups';
 import { cellId, checkStep, isNeighbor, PATH_ROUNDS, PATH_RULES, pathProblem, vanishingPath, type VanishingPathPuzzle } from './vanishingPath';
 
 const gen = <P,>(logic: Parameters<typeof generatePuzzle>[0], seed: number, d: (typeof DIFFICULTIES)[number]) => generatePuzzle(logic, createRng(seed), d).puzzle as P;
@@ -295,18 +295,25 @@ describe('24 shuffle-cups', () => {
       }
   });
 
-  it('はやさ：かんたん 650ms → ふつう 450 → むずかしい 320 → チャレンジ 220。数・回数・ボールは そのまま', () => {
-    expect(Object.fromEntries(DIFFICULTIES.map((d) => [d, CUP_RULES[d].swapMs]))).toEqual({ easy: 650, normal: 450, hard: 320, challenge: 220 });
+  it('はやさ（v3）：かんたん 520ms → ふつう 360 → むずかしい 250 → チャレンジ 170。数・回数・ボールは そのまま', () => {
+    expect(Object.fromEntries(DIFFICULTIES.map((d) => [d, CUP_RULES[d].swapMs]))).toEqual({ easy: 520, normal: 360, hard: 250, challenge: 170 });
     expect(Object.fromEntries(DIFFICULTIES.map((d) => [d, [CUP_RULES[d].cups, CUP_RULES[d].swaps, CUP_RULES[d].balls]]))).toEqual({ easy: [3, 2, 1], normal: [3, 4, 1], hard: [4, 6, 1], challenge: [6, 9, 2] });
+    expect(shuffleCups.generatorVersion).toBe(3);
     for (const d of DIFFICULTIES) {
-      expect(CUP_RULES[d].swapMs).toBeLessThan(CUP_SWAP_MS_V1[d] * 0.6); // まえより じゅうぶん はやい
+      // v2 より はやさ（1/時間）が 25〜30% 上がる：650/520=1.25, 450/360=1.25, 320/250=1.28, 220/170=1.29
+      expect(CUP_SWAP_MS_V2[d] / CUP_RULES[d].swapMs).toBeGreaterThanOrEqual(1.25);
+      expect(CUP_SWAP_MS_V2[d] / CUP_RULES[d].swapMs).toBeLessThanOrEqual(1.3);
+      expect(CUP_SWAP_MS_V2[d]).toBeLessThan(CUP_SWAP_MS_V1[d]);
       for (let s = 1; s <= 20; s++) expect(gen<ShuffleCupsPuzzle>(shuffleCups, s, d).swapMs).toBe(CUP_RULES[d].swapMs);
     }
     for (let i = 1; i < DIFFICULTIES.length; i++) expect(CUP_RULES[DIFFICULTIES[i]].swapMs).toBeLessThan(CUP_RULES[DIFFICULTIES[i - 1]].swapMs);
-    // 前の版の 問題（保存された swapMs）は 判定も そのまま
+    // 前の版（v1・v2）の 問題（保存された swapMs）は 判定も そのまま。あたらしく 出す 問題には しない
     const p = gen<ShuffleCupsPuzzle>(shuffleCups, 3, 'hard');
-    const v1 = { ...p, swapMs: CUP_SWAP_MS_V1.hard };
-    expect(shuffleCups.judge(v1, { picks: v1.rounds.map((r) => [...r.balls]), rounds: [] }).correct).toBe(true);
+    for (const old of [CUP_SWAP_MS_V1.hard, CUP_SWAP_MS_V2.hard]) {
+      const q = { ...p, swapMs: old };
+      expect(shuffleCups.judge(q, { picks: q.rounds.map((r) => [...r.balls]), rounds: [] }).correct).toBe(true);
+      expect(shuffleCups.validate(q, 'hard')).toBe('rules');
+    }
   });
 
   it('2この ボールは かたほうだけ あっても まちがい。4ラウンドだけでも まちがい', () => {
@@ -417,7 +424,7 @@ describe('registry: 25 games', () => {
     expect(GAME_BY_ID['vanishing-path']).toMatchObject({ category: 'memory', kind: 'board', resumable: true });
     expect(Object.keys(CATEGORY_LABEL)).toHaveLength(5);
     for (const id of ['net-quiz', 'vanishing-path'] as const) expect(GAME_BY_ID[id].logic.generatorVersion).toBe(1);
-    expect(GAME_BY_ID['shuffle-cups'].logic.generatorVersion).toBe(2); // はやさを かえた
+    expect(GAME_BY_ID['shuffle-cups'].logic.generatorVersion).toBe(3); // はやさを かえた（v2・v3）
     // 既存の 22 ゲームは そのまま
     expect(GAMES.slice(0, 22).map((g) => g.id)).toEqual(['decompose', 'pittari', 'make10', 'kufuu', 'balance', 'sequence', 'machine', 'flash', 'numberline', 'coins', 'shopping', 'sudoku', 'maze', 'shapes', 'mirror', 'pattern', 'missing-number', 'triangle-pattern', 'dot-connect', 'symbol-memory', 'nonogram', 'light-sequence']);
     expect(GAME_BY_ID['light-sequence'].logic.generatorVersion).toBe(2);

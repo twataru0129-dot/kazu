@@ -49,16 +49,18 @@ export interface ShuffleCupsAnswer {
 }
 
 /**
- * 難易度ごとの きまり。swapMs は generatorVersion 2 で 速くした（1200/1000/850/700 → 650/450/320/220）。
+ * 難易度ごとの きまり。swapMs は generatorVersion ごとに 速くしてきた：
+ * v1 1200/1000/850/700 → v2 650/450/320/220 → v3 520/360/250/170（かんたん/ふつう/むずかしい/チャレンジ）。
  * 途中保存に のこっている 前の版の 問題は、問題に 入っている swapMs の まま 再生する。
  */
 export const CUP_RULES: Record<Difficulty, { cups: number; swaps: number; swapMs: number; balls: number; minMoves: number }> = {
-  easy: { cups: 3, swaps: 2, swapMs: 650, balls: 1, minMoves: 1 },
-  normal: { cups: 3, swaps: 4, swapMs: 450, balls: 1, minMoves: 2 },
-  hard: { cups: 4, swaps: 6, swapMs: 320, balls: 1, minMoves: 3 },
-  challenge: { cups: 6, swaps: 9, swapMs: 220, balls: 2, minMoves: 3 },
+  easy: { cups: 3, swaps: 2, swapMs: 520, balls: 1, minMoves: 1 },
+  normal: { cups: 3, swaps: 4, swapMs: 360, balls: 1, minMoves: 2 },
+  hard: { cups: 4, swaps: 6, swapMs: 250, balls: 1, minMoves: 3 },
+  challenge: { cups: 6, swaps: 9, swapMs: 170, balls: 2, minMoves: 3 },
 };
-/** generatorVersion 1 の swapMs（前の版の 途中保存・記録を 読むときの 参考） */
+/** generatorVersion 2 の swapMs（前の版の 途中保存・記録を 読むときの 参考） */
+export const CUP_SWAP_MS_V2: Record<Difficulty, number> = { easy: 650, normal: 450, hard: 320, challenge: 220 };
 export const CUP_SWAP_MS_V1: Record<Difficulty, number> = { easy: 1200, normal: 1000, hard: 850, challenge: 700 };
 
 export const BALL_NAME = ['あか', 'あお'] as const;
@@ -130,7 +132,7 @@ const roundKey = (r: CupRound) => `${r.balls.join('')}:${r.swaps.map((s) => s.jo
 
 export const shuffleCups: GameLogic<ShuffleCupsPuzzle, ShuffleCupsAnswer> = {
   id: 'shuffle-cups',
-  generatorVersion: 2,
+  generatorVersion: 3,
   create(rng, d) {
     const rule = CUP_RULES[d];
     const rounds: CupRound[] = [];

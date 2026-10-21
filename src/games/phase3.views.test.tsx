@@ -309,10 +309,25 @@ describe('25 きえる みち', () => {
   });
 });
 
-describe('24 シャッフルカップ：はやさ（generatorVersion 2）', () => {
-  const FAKE: Parameters<typeof vi.useFakeTimers>[0] = { shouldAdvanceTime: false, toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance', 'Date'] };
-  const STEP = 8;
+describe('24 シャッフルカップ：はやさ（generatorVersion 3）', () => {
+  const STEP = 4;
+  const GAP = 30;
+  const MIN_FRAMES = 3;
   const group = () => screen.getByRole('group', { name: 'カップ' });
+  let frameCount = 0;
+  /** 画面の 更新（requestAnimationFrame）を frameMs ごとに する。60fps ≒ 16ms、iPhone の 間引き・おそい 端末は 33〜100ms */
+  const useFrames = (frameMs: number) => {
+    vi.useFakeTimers({ shouldAdvanceTime: false, toFake: ['setTimeout', 'clearTimeout', 'performance', 'Date'] });
+    frameCount = 0;
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) =>
+      setTimeout(() => {
+        frameCount++;
+        cb(performance.now());
+      }, frameMs) as unknown as number,
+    );
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
+  };
+  afterEach(() => vi.unstubAllGlobals());
   /** DOM の カップは ID の じゅん。ラベルの「ひだりから N ばんめ」から いまの ならび（場所 → ID）を よむ */
   const arrangement = () => {
     const pos = within(group())
@@ -322,131 +337,187 @@ describe('24 シャッフルカップ：はやさ（generatorVersion 2）', () =
     pos.forEach((p, id) => (at[p] = id));
     return at;
   };
-  /** 「みる」から さいごまで 見て、いれかえ ごとの うごいた 時間・おわった あとの ならびを あつめる */
-  const watchAndMeasure = async () => {
+  /** いれかえ中の カップの たての ずれ（ID の じゅん） */
+  const lifts = () => [...group().children].filter((el) => el.tagName === 'DIV' && (el as HTMLElement).style.transform).map((el) => Number((el as HTMLElement).style.transform.match(/,\s*(-?[\d.e-]+)px\)/)![1]));
+  /**
+   * 「みる」から さいごまで 見て、いれかえ ごとの 時間・コマ数・つぎまでの あいだ・おわった あとの ならびを あつめる。
+   * とちゅうでは、うごいている 2つが 上と下に わかれている（かさならない）ことも しらべる
+   */
+  const watchAndMeasure = async (p: ShuffleCupsPuzzle, k = 0) => {
     fireEvent.click(screen.getByRole('button', { name: /みる$/ }));
-    const spans: { i: number; ms: number }[] = [];
+    const spans: { i: number; ms: number; frames: number; start: number; end: number }[] = [];
     const after: number[][] = [];
     const order: number[] = [];
     let prev: string | null = null;
-    for (let t = 0; t < 40000 && group().getAttribute('data-phase') !== 'answer'; t += STEP) {
+    let now = 0;
+    for (; now < 60000 && group().getAttribute('data-phase') !== 'answer'; now += STEP) {
       await act(async () => {
         vi.advanceTimersByTime(STEP);
       });
       const cur = group().getAttribute('data-swap');
+      if (cur !== null && prev !== cur) {
+        order.push(Number(cur));
+        spans.push({ i: Number(cur), ms: 0, frames: frameCount, start: now, end: now });
+      }
       if (cur !== null) {
-        const i = Number(cur);
-        if (prev !== cur) {
-          order.push(i);
-          spans.push({ i, ms: 0 });
+        const sp = spans.at(-1)!;
+        sp.end = now + STEP;
+        sp.ms = sp.end - sp.start;
+        if (document.documentElement.dataset.motion !== 'reduced') {
+          const [a, b] = p.rounds[k].swaps[Number(cur)];
+          const y = lifts();
+          expect(y[a] <= 0 && y[b] >= 0, `swap ${cur}: ${y}`).toBe(true);
+          expect(y.filter((_, id) => id !== a && id !== b).every((v) => v === 0)).toBe(true);
         }
-        spans.at(-1)!.ms += STEP;
-      } else if (prev !== null) after.push(arrangement());
+      }
+      if (cur === null && prev !== null) {
+        spans.at(-1)!.frames = frameCount - spans.at(-1)!.frames;
+        after.push(arrangement());
+      }
       prev = cur;
     }
-    return { spans, after, order };
+    expect(group().getAttribute('data-phase')).toBe('answer'); // とちゅうで とまらない
+    const gaps = spans.slice(1).map((sp, i) => sp.start - spans[i].end);
+    return { spans, after, order, gaps };
+  };
+  const answer = (p: ShuffleCupsPuzzle, k = 0) => {
+    const end = arrangementAfter(p.cups, p.rounds[k].swaps);
+    for (const b of p.rounds[k].balls) fireEvent.click(screen.getByRole('button', { name: new RegExp(`^ひだりから ${positionOf(end, b) + 1}ばんめの カップ`) }));
+    if (p.rounds[k].balls.length > 1) fireEvent.click(screen.getByRole('button', { name: 'こたえる' }));
+    expect(screen.getByTestId('cups-message').textContent).toBe('あたり！');
   };
 
   for (const d of ['easy', 'normal', 'hard', 'challenge'] as const)
-    it(`${d}：1回の いれかえは swapMs ぐらい。つぎの いれかえと かさならず、ならびは 計算どおり`, async () => {
-      const p = gen<ShuffleCupsPuzzle>(shuffleCups, 31, d);
-      expect(p.swapMs).toBe({ easy: 650, normal: 450, hard: 320, challenge: 220 }[d]);
-      await renderView('shuffle-cups', p, { difficulty: d });
-      vi.useFakeTimers(FAKE);
-      const { spans, after, order } = await watchAndMeasure();
-      const swaps = p.rounds[0].swaps;
-      // 0, 1, 2 … と 1つずつ。もどったり 2つ同時に うごいたり しない
-      expect(order).toEqual(swaps.map((_, i) => i));
-      for (const s of spans) {
-        expect(s.ms).toBeGreaterThanOrEqual(p.swapMs);
-        expect(s.ms).toBeLessThanOrEqual(p.swapMs + 40);
-      }
-      after.forEach((a, i) => expect(a).toEqual(arrangementAfter(p.cups, swaps, i + 1)));
-      // さいごの ならびで ボールの カップを えらぶと あたり
-      const end = arrangementAfter(p.cups, swaps);
-      for (const b of p.rounds[0].balls) fireEvent.click(screen.getByRole('button', { name: new RegExp(`^ひだりから ${positionOf(end, b) + 1}ばんめの カップ`) }));
-      if (p.rounds[0].balls.length > 1) fireEvent.click(screen.getByRole('button', { name: 'こたえる' }));
-      expect(screen.getByTestId('cups-message').textContent).toBe('あたり！');
-    });
+    for (const frameMs of [16, 33, 50, 100])
+      it(`${d}・${frameMs}msごとの 画面更新：swapMs どおりの はやさ・あいだ 30ms・かさならず ならびは 計算どおり`, async () => {
+        const p = gen<ShuffleCupsPuzzle>(shuffleCups, 31, d);
+        expect(p.swapMs).toBe({ easy: 520, normal: 360, hard: 250, challenge: 170 }[d]);
+        await renderView('shuffle-cups', p, { difficulty: d });
+        useFrames(frameMs);
+        const { spans, after, order, gaps } = await watchAndMeasure(p);
+        const swaps = p.rounds[0].swaps;
+        // 0, 1, 2 … と 1つずつ。もどったり 2つ同時に うごいたり しない
+        expect(order).toEqual(swaps.map((_, i) => i));
+        // はやさ：swapMs より はやく ならず、おそくても「1コマぶん」まで。
+        // とても おそい 画面（1コマ > swapMs/3）だけは、弧の とちゅうを 見せる ため 3コマ ぶん かかる
+        const upper = Math.max(p.swapMs + frameMs, MIN_FRAMES * frameMs) + STEP;
+        for (const sp of spans) {
+          expect(sp.ms, `swap ${sp.i}`).toBeGreaterThanOrEqual(p.swapMs - STEP);
+          expect(sp.ms, `swap ${sp.i}`).toBeLessThanOrEqual(upper);
+          expect(sp.frames, `swap ${sp.i} frames`).toBeGreaterThanOrEqual(Math.min(MIN_FRAMES, Math.ceil(p.swapMs / frameMs)));
+        }
+        for (const g of gaps) {
+          expect(g).toBeGreaterThanOrEqual(GAP - STEP);
+          expect(g).toBeLessThanOrEqual(GAP + STEP);
+        }
+        after.forEach((a, i) => expect(a).toEqual(arrangementAfter(p.cups, swaps, i + 1)));
+        answer(p);
+      });
+
+  it('チャレンジ（170ms）を 60fps で：さいしょの 1コマも むだに せず、1回あたり 1コマ（16ms）いない の おくれ', async () => {
+    const p = gen<ShuffleCupsPuzzle>(shuffleCups, 5, 'challenge');
+    await renderView('shuffle-cups', p, { difficulty: 'challenge' });
+    useFrames(16);
+    const { spans } = await watchAndMeasure(p);
+    const total = spans.reduce((s, sp) => s + sp.ms, 0);
+    // 9回 × (170ms ＋ 1コマぶん) いない（さいしょの コマを まつ 前の しくみだと 1回 16ms ずつ おそく なる）
+    expect(total).toBeLessThanOrEqual(9 * (170 + 16));
+    expect(total).toBeGreaterThanOrEqual(9 * (170 - STEP));
+  });
 
   it('「もういちど みる」は 同じ じゅんばん・同じ はやさ。ヒント3は ゆっくり（1.7ばい）', async () => {
     const p = gen<ShuffleCupsPuzzle>(shuffleCups, 12, 'hard');
     const r = await renderView('shuffle-cups', p, { difficulty: 'hard' });
-    vi.useFakeTimers(FAKE);
-    const a = await watchAndMeasure();
-    const b = await watchAndMeasure();
+    useFrames(16);
+    const a = await watchAndMeasure(p);
+    const b = await watchAndMeasure(p);
     expect(b.order).toEqual(a.order);
     expect(b.after).toEqual(a.after);
     expect(b.spans.map((s) => s.ms)).toEqual(a.spans.map((s) => s.ms));
     r.view.unmount();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     await renderView('shuffle-cups', p, { difficulty: 'hard', hintLevel: 3 });
-    vi.useFakeTimers(FAKE);
-    const slow = await watchAndMeasure();
+    useFrames(16);
+    const slow = await watchAndMeasure(p);
     expect(slow.after).toEqual(a.after);
     for (const s of slow.spans) {
-      expect(s.ms).toBeGreaterThanOrEqual(p.swapMs * 1.7);
-      expect(s.ms).toBeLessThanOrEqual(p.swapMs * 1.7 + 40);
+      expect(s.ms).toBeGreaterThanOrEqual(p.swapMs * 1.7 - STEP);
+      expect(s.ms).toBeLessThanOrEqual(p.swapMs * 1.7 + 16 + STEP);
     }
+    for (const g of slow.gaps) expect(g).toBeLessThanOrEqual(GAP + STEP);
   });
 
-  it('うごきを へらす：速い 難易度でも 1つずつ 0.8びょう 以上 しめして から ならべかえる', async () => {
+  it('れんだ：「みる」を 2回 おしても 再生は 1つ。こたえる 前の「もういちど みる」も はじめから 1つだけ', async () => {
+    const p = gen<ShuffleCupsPuzzle>(shuffleCups, 8, 'challenge');
+    await renderView('shuffle-cups', p, { difficulty: 'challenge' });
+    useFrames(16);
+    const btn = screen.getByRole('button', { name: 'みる' });
+    fireEvent.click(btn);
+    fireEvent.click(btn); // 2回め（すぐ おせなく なる）
+    const first = await (async () => {
+      // 「みる」は watchAndMeasure の 中で もう1回 おされるが、見せている あいだは おせない
+      expect(screen.getByRole('button', { name: /みる$/ })).toBeDisabled();
+      return null;
+    })();
+    expect(first).toBeNull();
+    for (let t = 0; t < 10000 && group().getAttribute('data-phase') !== 'answer'; t += 50)
+      await act(async () => {
+        vi.advanceTimersByTime(50);
+      });
+    // こたえる 前に もういちど みる を つづけて おす
+    const again = screen.getByRole('button', { name: 'もういちど みる' });
+    fireEvent.click(again);
+    fireEvent.click(again);
+    for (let t = 0; t < 2000; t += 50)
+      await act(async () => {
+        vi.advanceTimersByTime(50);
+      });
+    const m = await watchAndMeasure(p);
+    expect(m.order).toEqual(p.rounds[0].swaps.map((_, i) => i));
+    m.after.forEach((a, i) => expect(a).toEqual(arrangementAfter(p.cups, p.rounds[0].swaps, i + 1)));
+    answer(p);
+  });
+
+  it('うごきを へらす：速い 難易度でも 1つずつ 0.8びょう 以上 しめし、つぎまで 0.35びょう あける（30ms に しない）', async () => {
     const p = gen<ShuffleCupsPuzzle>(shuffleCups, 4, 'challenge');
     await renderView('shuffle-cups', p, { difficulty: 'challenge' });
     // 設定の 反映（AppProvider）の あとに「動きを減らす」に する
     document.documentElement.dataset.motion = 'reduced';
-    vi.useFakeTimers(FAKE);
-    const { spans, after, order } = await watchAndMeasure();
+    useFrames(16);
+    const { spans, after, order, gaps } = await watchAndMeasure(p);
     expect(order).toEqual(p.rounds[0].swaps.map((_, i) => i));
     for (const s of spans) {
-      expect(s.ms).toBeGreaterThanOrEqual(800);
-      expect(s.ms).toBeLessThanOrEqual(800 + STEP * 2);
+      expect(s.ms).toBeGreaterThanOrEqual(800 - STEP);
+      expect(s.ms).toBeLessThanOrEqual(800 + STEP);
+    }
+    for (const g of gaps) {
+      expect(g).toBeGreaterThanOrEqual(350 - STEP);
+      expect(g).toBeLessThanOrEqual(350 + STEP);
     }
     after.forEach((a, i) => expect(a).toEqual(arrangementAfter(p.cups, p.rounds[0].swaps, i + 1)));
+    answer(p);
   });
 
-  it('コマが とんでも（iPhone の 間引きなど）1コマで ぜんぶ うごかず、とちゅうを 通る', async () => {
-    const p = gen<ShuffleCupsPuzzle>(shuffleCups, 2, 'challenge');
-    await renderView('shuffle-cups', p, { difficulty: 'challenge' });
-    vi.useFakeTimers({ shouldAdvanceTime: false, toFake: ['setTimeout', 'clearTimeout', 'performance', 'Date'] });
-    // 画面の 更新が 0.5びょうに 1回しか こない 端末の まね
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(performance.now()), 500) as unknown as number);
-    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
-    fireEvent.click(screen.getByRole('button', { name: 'みる' }));
-    for (let t = 0; t < 10000 && group().getAttribute('data-swap') !== '0'; t += 100)
-      await act(async () => {
-        vi.advanceTimersByTime(100);
-      });
-    expect(group().getAttribute('data-swap')).toBe('0');
-    // 1コマ 500ms（大きく とんだ）でも、1コマで 1/4 しか すすまない
-    let frames = 0;
-    while (group().getAttribute('data-swap') === '0' && frames < 20) {
-      await act(async () => {
-        vi.advanceTimersByTime(500);
-      });
-      frames++;
-    }
-    expect(frames).toBeGreaterThanOrEqual(4);
-    vi.unstubAllGlobals();
-  });
-
-  it('前の版（generatorVersion 1）の 問題は 保存された swapMs の まま 再開・再生できる', async () => {
-    const v2 = gen<ShuffleCupsPuzzle>(shuffleCups, 9, 'normal');
-    const v1: ShuffleCupsPuzzle = { ...v2, swapMs: 1000 }; // 前の版の ふつう
-    expect(shuffleCups.validate(v1, 'normal')).toBe('rules'); // あたらしく 出す 問題には しない
-    const records = v1.rounds.map((_, k) => ({ views: k < 1 ? 1 : 0, wrong: 0, balls: 1, cleared: k < 1, firstTry: k < 1 ? true : undefined }));
-    const r = await renderView('shuffle-cups', v1, { difficulty: 'normal', draft: { round: 1, records, picks: [v1.rounds[0].balls] } });
-    expect(screen.getByText('ラウンド 2／5')).toBeInTheDocument();
-    vi.useFakeTimers(FAKE);
-    const { spans, after } = await watchAndMeasure();
-    for (const s of spans) {
-      expect(s.ms).toBeGreaterThanOrEqual(1000);
-      expect(s.ms).toBeLessThanOrEqual(1040);
-    }
-    after.forEach((a, i) => expect(a).toEqual(arrangementAfter(v1.cups, v1.rounds[1].swaps, i + 1)));
-    const end = arrangementAfter(v1.cups, v1.rounds[1].swaps);
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^ひだりから ${positionOf(end, v1.rounds[1].balls[0]) + 1}ばんめの カップ`) }));
-    expect(screen.getByTestId('cups-message').textContent).toBe('あたり！');
-    expect(r.saveDraft.mock.calls.at(-1)![0]).toMatchObject({ round: 2 });
-  });
+  for (const [ver, swapMs] of [
+    ['1', 1000],
+    ['2', 450],
+  ] as const)
+    it(`前の版（generatorVersion ${ver}）の 問題は 保存された swapMs（${swapMs}ms）の まま 再開・再生できる`, async () => {
+      const cur = gen<ShuffleCupsPuzzle>(shuffleCups, 9, 'normal');
+      const old: ShuffleCupsPuzzle = { ...cur, swapMs }; // 前の版の ふつう
+      expect(shuffleCups.validate(old, 'normal')).toBe('rules'); // あたらしく 出す 問題には しない
+      const records = old.rounds.map((_, k) => ({ views: k < 1 ? 1 : 0, wrong: 0, balls: 1, cleared: k < 1, firstTry: k < 1 ? true : undefined }));
+      const r = await renderView('shuffle-cups', old, { difficulty: 'normal', draft: { round: 1, records, picks: [old.rounds[0].balls] } });
+      expect(screen.getByText('ラウンド 2／5')).toBeInTheDocument();
+      useFrames(16);
+      const { spans, after } = await watchAndMeasure(old, 1);
+      for (const s of spans) {
+        expect(s.ms).toBeGreaterThanOrEqual(swapMs - STEP);
+        expect(s.ms).toBeLessThanOrEqual(swapMs + 16 + STEP);
+      }
+      after.forEach((a, i) => expect(a).toEqual(arrangementAfter(old.cups, old.rounds[1].swaps, i + 1)));
+      answer(old, 1);
+      expect(r.saveDraft.mock.calls.at(-1)![0]).toMatchObject({ round: 2 });
+    });
 });
