@@ -42,12 +42,16 @@ function readStore<T>(page: Page, store: string): Promise<T[]> {
 }
 
 /** 途中保存から いまの問題を読む */
-async function readDraftPuzzle<T>(page: Page, gameId: string): Promise<T> {
+async function readDraftPuzzle<T>(page: Page, gameId: string, match: (p: T) => boolean = () => true): Promise<T> {
   let found: T | undefined;
   await expect
     .poll(async () => {
-      const all = await readStore<{ gameId?: string; status: string; activeDraft?: { round: { puzzle: T } } }>(page, 'sessions');
-      found = all.find((x) => x.gameId === gameId && x.status === 'inProgress' && x.activeDraft)?.activeDraft?.round.puzzle;
+      const all = await readStore<{ gameId?: string; status: string; createdAt: string; activeDraft?: { round: { puzzle: T } } }>(page, 'sessions');
+      // いちばん あとに はじめた あそびの 途中保存（前の あそびが のこって いても まちがえない）
+      found = all
+        .filter((x) => x.gameId === gameId && x.status === 'inProgress' && x.activeDraft && match(x.activeDraft.round.puzzle))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .at(-1)?.activeDraft?.round.puzzle;
       return !!found;
     })
     .toBe(true);
@@ -166,9 +170,9 @@ for (const size of SIZES) {
       // むずかしい：1回 320ms。みせる 1.4びょう＋0.5びょう＋6回ぶんで こたえられる（まえの はやさでは まだ とちゅう）
       await startGame(page, 'shuffle-cups', 'むずかしい');
       await page.getByRole('button', { name: 'みる', exact: true }).click();
-      const h = await readDraftPuzzle<ShuffleCupsPuzzle>(page, 'shuffle-cups');
-      expect(h.swapMs).toBe(320);
       await page.clock.runFor(1400 + 500 + 6 * (320 + 50) + 400);
+      const h = await readDraftPuzzle<ShuffleCupsPuzzle>(page, 'shuffle-cups', (x) => x.cups === 4);
+      expect(h.swapMs).toBe(320);
       await expect(group).toHaveAttribute('data-phase', 'answer');
       const hEnd = arrangementAfter(h.cups, h.rounds[0].swaps);
       await cupAt(positionOf(hEnd, h.rounds[0].balls[0])).click();
