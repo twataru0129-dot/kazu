@@ -167,12 +167,12 @@ for (const size of SIZES) {
       await page.getByRole('button', { name: 'こたえる' }).click();
       await expect(page.getByTestId('cups-message')).toHaveText('あたり！');
 
-      // むずかしい：1回 320ms。みせる 1.4びょう＋0.5びょう＋6回ぶんで こたえられる（まえの はやさでは まだ とちゅう）
+      // むずかしい：1回 250ms＋あいだ 30ms。みせる 1.4びょう＋0.5びょう＋6回ぶんで こたえられる（まえの はやさでは まだ とちゅう）
       await startGame(page, 'shuffle-cups', 'むずかしい');
       await page.getByRole('button', { name: 'みる', exact: true }).click();
-      await page.clock.runFor(1400 + 500 + 6 * (320 + 50) + 400);
+      await page.clock.runFor(1400 + 500 + 6 * (250 + 30) + 200);
       const h = await readDraftPuzzle<ShuffleCupsPuzzle>(page, 'shuffle-cups', (x) => x.cups === 4);
-      expect(h.swapMs).toBe(320);
+      expect(h.swapMs).toBe(250);
       await expect(group).toHaveAttribute('data-phase', 'answer');
       const hEnd = arrangementAfter(h.cups, h.rounds[0].swaps);
       await cupAt(positionOf(hEnd, h.rounds[0].balls[0])).click();

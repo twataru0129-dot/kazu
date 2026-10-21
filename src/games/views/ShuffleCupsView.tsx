@@ -19,14 +19,18 @@ const BALL = [
 ];
 const SHOW_MS = 1400;
 /** いれかえと いれかえの あいだ（ミリ秒） */
-const GAP_MS = 50;
+const GAP_MS = 30;
 /** ヒント3：つぎの 再生を ゆっくりに する 倍率 */
 const SLOW_FACTOR = 1.7;
 /** うごきを へらす 設定：いれかわる 2つを しめす 時間の 下限と、つぎまでの あいだ */
 const REDUCED_STEP_MS = 800;
 const REDUCED_GAP_MS = 350;
-/** 1回の いれかえで かならず 見せる コマの 数（これより こまかく すすむ） */
-const MIN_FRAMES = 4;
+/**
+ * 1回の いれかえで かならず 見せる コマの 数。1コマで すすむのは 1/MIN_FRAMES まで。
+ * チャレンジ 170ms でも ふつうの 画面（60・30・20fps）では おそく ならない 大きさ（170/3 ≒ 57ms）にし、
+ * とても 遅い 端末でも 弧の とちゅうを 2回は 見せる
+ */
+const MIN_FRAMES = 3;
 const LIFT = 44;
 
 const freshRecords = (p: ShuffleCupsPuzzle): CupRoundRecord[] => p.rounds.map((r) => ({ views: 0, wrong: 0, balls: r.balls.length, cleared: false }));
@@ -127,14 +131,16 @@ export function ShuffleCupsView({ puzzle: p, submit, solved, status, draft, save
       later(Math.max(p.swapMs, REDUCED_STEP_MS) * slow, done);
       return;
     }
-    // すすみぐあいは 1コマごとの 時間を たして きめる。iPhone などで コマが とんでも
-    // 1コマで すすむのは 1/4 まで（瞬間移動に 見えない。弧の とちゅうを かならず 通る）
+    // すすみぐあいは 1コマごとの 時間を たして きめる（いれかえを はじめた 時刻から 数える ので、
+    // さいしょの コマも むだに ならない）。iPhone などで コマが とんでも、1コマで すすむのは 1/MIN_FRAMES まで
+    // （瞬間移動に 見えない。弧の とちゅうを かならず 通る）
     let elapsed = 0;
-    let last: number | null = null;
+    let last = performance.now();
+    setMove({ i, t: 0 });
     const step = (now: number) => {
       if (playId.current !== id) return;
-      if (last !== null) elapsed += Math.min(now - last, ms / MIN_FRAMES);
-      last = now;
+      elapsed += Math.min(Math.max(0, now - last), ms / MIN_FRAMES);
+      last = Math.max(last, now);
       const t = Math.min(1, elapsed / ms);
       setMove({ i, t });
       if (t < 1) raf.current = requestAnimationFrame(step);
