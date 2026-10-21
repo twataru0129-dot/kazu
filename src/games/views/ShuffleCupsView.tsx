@@ -18,6 +18,15 @@ const BALL = [
   { fill: '#3d7fd9', label: 'あおい ボール' },
 ];
 const SHOW_MS = 1400;
+/** いれかえと いれかえの あいだ（ミリ秒） */
+const GAP_MS = 50;
+/** ヒント3：つぎの 再生を ゆっくりに する 倍率 */
+const SLOW_FACTOR = 1.7;
+/** うごきを へらす 設定：いれかわる 2つを しめす 時間の 下限と、つぎまでの あいだ */
+const REDUCED_STEP_MS = 800;
+const REDUCED_GAP_MS = 350;
+/** 1回の いれかえで かならず 見せる コマの 数（これより こまかく すすむ） */
+const MIN_FRAMES = 4;
 const LIFT = 44;
 
 const freshRecords = (p: ShuffleCupsPuzzle): CupRoundRecord[] => p.rounds.map((r) => ({ views: 0, wrong: 0, balls: r.balls.length, cleared: false }));
@@ -100,24 +109,33 @@ export function ShuffleCupsView({ puzzle: p, submit, solved, status, draft, save
       setMessage(balls > 1 ? 'あかの ボールは どこ？' : 'ボールは どの カップ？');
       return;
     }
-    const ms = p.swapMs * (hintLevel >= 3 ? 1.7 : 1);
+    const slow = hintLevel >= 3 ? SLOW_FACTOR : 1;
+    const ms = p.swapMs * slow;
     const id = playId.current;
     const done = () => {
       setArr(arrangementAfter(p.cups, swaps, i + 1));
       setMove(null);
-      later(reduced ? 350 : 120, () => runSwap(i + 1));
+      // つぎの いれかえは、いまの いれかえが おわってから（かさならない）
+      later(document.documentElement.dataset.motion === 'reduced' ? REDUCED_GAP_MS : GAP_MS, () => runSwap(i + 1));
     };
     play('move');
-    if (reduced) {
-      // うごきを へらす：いれかわる 2つを しめしてから、ならびを 1回で かえる（1つずつ おえる）
+    // 設定は その時点の ものを つかう（とちゅうで かわっても つぎの いれかえから したがう）
+    if (document.documentElement.dataset.motion === 'reduced') {
+      // うごきを へらす：いれかわる 2つを しめしてから、ならびを 1回で かえる（1つずつ おえる）。
+      // 速い 難易度でも おいかけられる ように、しめす 時間は 下げすぎない
       setMove({ i, t: 0 });
-      later(ms * 0.7, done);
+      later(Math.max(p.swapMs, REDUCED_STEP_MS) * slow, done);
       return;
     }
-    const t0 = performance.now();
+    // すすみぐあいは 1コマごとの 時間を たして きめる。iPhone などで コマが とんでも
+    // 1コマで すすむのは 1/4 まで（瞬間移動に 見えない。弧の とちゅうを かならず 通る）
+    let elapsed = 0;
+    let last: number | null = null;
     const step = (now: number) => {
       if (playId.current !== id) return;
-      const t = Math.min(1, (now - t0) / ms);
+      if (last !== null) elapsed += Math.min(now - last, ms / MIN_FRAMES);
+      last = now;
+      const t = Math.min(1, elapsed / ms);
       setMove({ i, t });
       if (t < 1) raf.current = requestAnimationFrame(step);
       else done();
@@ -248,7 +266,7 @@ export function ShuffleCupsView({ puzzle: p, submit, solved, status, draft, save
         )}
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <div ref={ref} role="group" aria-label="カップ" data-phase={phase} style={{ position: 'relative', width, height: boardH, margin: '0 auto' }}>
+        <div ref={ref} role="group" aria-label="カップ" data-phase={phase} data-swap={move ? move.i : undefined} style={{ position: 'relative', width, height: boardH, margin: '0 auto' }}>
           {/* カップ ID ごとに 1つ。ならび順は かえず、場所は 計算で きめる */}
           {Array.from({ length: p.cups }, (_, cup) => {
             const { x, y } = posX(cup);

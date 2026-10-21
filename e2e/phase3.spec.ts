@@ -162,6 +162,17 @@ for (const size of SIZES) {
       await noOverflow(page, 'cups challenge');
       await page.getByRole('button', { name: 'こたえる' }).click();
       await expect(page.getByTestId('cups-message')).toHaveText('あたり！');
+
+      // むずかしい：1回 320ms。みせる 1.4びょう＋0.5びょう＋6回ぶんで こたえられる（まえの はやさでは まだ とちゅう）
+      await startGame(page, 'shuffle-cups', 'むずかしい');
+      await page.getByRole('button', { name: 'みる', exact: true }).click();
+      const h = await readDraftPuzzle<ShuffleCupsPuzzle>(page, 'shuffle-cups');
+      expect(h.swapMs).toBe(320);
+      await page.clock.runFor(1400 + 500 + 6 * (320 + 50) + 400);
+      await expect(group).toHaveAttribute('data-phase', 'answer');
+      const hEnd = arrangementAfter(h.cups, h.rounds[0].swaps);
+      await cupAt(positionOf(hEnd, h.rounds[0].balls[0])).click();
+      await expect(page.getByTestId('cups-message')).toHaveText('あたり！');
     });
 
     test('25 きえる みち：道が きえたら となりを じゅんに。まちがえたら スタートから。リロードしても 同じ 道の つづき', async ({ page }) => {
