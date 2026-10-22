@@ -287,8 +287,8 @@ describe('27 数字をさがせ！', () => {
 
 describe('registry: 27 games', () => {
   it('26・27 を つづきの 番号で 登録。カテゴリは くらし・きおく', () => {
-    expect(GAMES).toHaveLength(27);
-    expect(GAMES.map((g) => g.no)).toEqual(Array.from({ length: 27 }, (_, i) => String(i + 1).padStart(2, '0')));
+    // 全体の 数は あとの 弾で ふえるので、27 までが つづきの 番号かを みる
+    expect(GAMES.map((g) => g.no).slice(0, 27)).toEqual(Array.from({ length: 27 }, (_, i) => String(i + 1).padStart(2, '0')));
     expect(GAME_BY_ID['clock-master']).toMatchObject({ no: '26', title: 'とけいマスター', category: 'life', kind: 'set' });
     expect(GAME_BY_ID['number-hunt']).toMatchObject({ no: '27', title: '数字をさがせ！', category: 'memory', kind: 'board', resumable: true });
     expect(Object.keys(CATEGORY_LABEL)).toHaveLength(5);

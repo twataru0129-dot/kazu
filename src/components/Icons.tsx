@@ -424,6 +424,47 @@ export function GameIcon({ id }: { id: GameId }) {
             <circle cx="37" cy="25" r="8" fill="none" stroke="#d97706" strokeWidth="2.2" />
           </>
         );
+      case 'pizza-fractions':
+        return (
+          <>
+            <circle cx="24" cy="24" r="20" fill="#d9a35b" stroke="#1b2838" strokeWidth="2" />
+            <circle cx="24" cy="24" r="16" fill="#ffd66b" />
+            <path d="M24 24 L24 8 A16 16 0 0 1 40 24 Z" fill="#ffb648" stroke="#e8504f" strokeWidth="2" transform="translate(2 -2)" />
+            <path d="M24 8 V40 M8 24 H40" stroke="#b9772f" strokeWidth="1.6" />
+            <circle cx="16" cy="17" r="3" fill="#d6463f" />
+            <circle cx="17" cy="32" r="3" fill="#d6463f" />
+            <circle cx="31" cy="32" r="3" fill="#d6463f" />
+            <circle cx="33" cy="16" r="2.6" fill="#d6463f" />
+          </>
+        );
+      case 'block-builder':
+        return (
+          <>
+            <path d="M8 30 L20 24 L32 30 L20 36 Z" fill="#9fd3ff" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M8 30 V38 L20 44 V36 Z" fill="#5aa9e6" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M32 30 V38 L20 44 V36 Z" fill="#3b82c4" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M20 12 L32 6 L44 12 L32 18 Z" fill="#ffe28a" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M20 12 V30 L32 36 V18 Z" fill="#f2c230" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M44 12 V30 L32 36 V18 Z" fill="#c99a12" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M20 21 L32 27 L44 21" fill="none" stroke="#1b2838" strokeWidth="1" />
+          </>
+        );
+      case 'magic-square':
+        return (
+          <>
+            {[0, 1, 2].map((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={4 + c * 13} y={4 + r * 13} width="12" height="12" rx="2.5" fill={r === 1 && c === 1 ? '#ffe9a8' : '#f3f7fb'} stroke="#8fb3d9" />))}
+            {t(10, 14, '2', 8)}
+            {t(23, 14, '7', 8)}
+            {t(36, 14, '6', 8)}
+            {t(10, 27, '9', 8)}
+            {t(23, 27, '5', 8, '#d97706')}
+            {t(36, 27, '1', 8)}
+            {t(10, 40, '4', 8)}
+            {t(23, 40, '3', 8)}
+            {t(36, 40, '8', 8)}
+            <path d="M5 5 L42 42" stroke="#e8590c" strokeWidth="1.6" strokeDasharray="3 2" />
+          </>
+        );
       case 'vanishing-path':
         return (
           <>

@@ -28,7 +28,10 @@ export type GameId =
   | 'shuffle-cups'
   | 'vanishing-path'
   | 'clock-master'
-  | 'number-hunt';
+  | 'number-hunt'
+  | 'pizza-fractions'
+  | 'block-builder'
+  | 'magic-square';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 
