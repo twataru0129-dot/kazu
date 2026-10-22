@@ -30,6 +30,22 @@ import {
   wrongCells,
   type BlockPuzzle,
 } from './blockBuilder';
+import {
+  blankCount,
+  easiestLine,
+  isMagic,
+  LO_SHU,
+  lineStatus,
+  MAGIC4_TEMPLATES,
+  MAGIC_LEVELS,
+  magicLines,
+  magicSolution,
+  magicSquare,
+  magicSum,
+  solveMagic,
+  symmetries,
+  type MagicPuzzle,
+} from './magicSquare';
 
 const SEEDS = 500;
 const each = <P,>(logic: Parameters<typeof generatePuzzle>[0], d: Difficulty, fn: (p: P, fallback: boolean) => void) => {
@@ -311,5 +327,140 @@ describe('29 ブロック建築パズル：判定・向き・ヒント', () => {
   });
   it('登録：29 ・パズル・盤面型で つづきから', () => {
     expect(GAME_BY_ID['block-builder']).toMatchObject({ no: '29', title: 'ブロック建築パズル', category: 'puzzle', kind: 'board', resumable: true });
+  });
+});
+
+describe('30 魔法陣パズル：お手本と 解く しくみ', () => {
+  it('目標の 合計は 3×3 で 15、4×4 で 34。列は 2n＋2 本', () => {
+    expect(magicSum(3)).toBe(15);
+    expect(magicSum(4)).toBe(34);
+    expect(magicLines(3)).toHaveLength(8);
+    expect(magicLines(4)).toHaveLength(10);
+  });
+  it('洛書の 8とおりは ぜんぶ ちがう 魔方陣', () => {
+    const all = symmetries(LO_SHU, 3);
+    expect(new Set(all.map((g) => g.join())).size).toBe(8);
+    for (const g of all) expect(isMagic(g, 3)).toBe(true);
+  });
+  it('4×4 の 型は どれも 魔方陣。回転・裏がえし・17−x でも 魔方陣のまま', () => {
+    const seen = new Set<string>();
+    for (const t of MAGIC4_TEMPLATES) {
+      expect(isMagic(t, 4)).toBe(true);
+      for (const g of symmetries(t, 4)) {
+        expect(isMagic(g, 4)).toBe(true);
+        expect(isMagic(g.map((v) => 17 - v), 4)).toBe(true);
+        seen.add(g.join());
+        seen.add(g.map((v) => 17 - v).join());
+      }
+    }
+    expect(seen.size).toBeGreaterThan(40);
+  });
+  it('魔方陣で ない ものは はじく（合計ちがい・かさなり・はんいの そと・小数）', () => {
+    expect(isMagic([2, 7, 6, 9, 5, 1, 4, 8, 3], 3)).toBe(false);
+    expect(isMagic([5, 5, 5, 5, 5, 5, 5, 5, 5], 3)).toBe(false);
+    expect(isMagic([2, 7, 6, 9, 5, 1, 4, 3, 8, 1], 3)).toBe(false);
+    expect(isMagic([2, 7, 6, 9, 5, 1, 4, 3, 8.5], 3)).toBe(false);
+    // 合計 15 でも 1〜9 を 1かいずつ でなければ だめ
+    expect(isMagic([0, 10, 5, 10, 5, 0, 5, 0, 10], 3)).toBe(false);
+  });
+  it('解く：あきが ぜんぶ でも 3×3 の 答えは 8つ。上限で とめる', () => {
+    expect(solveMagic(new Array(9).fill(0), 3, 100).count).toBe(8);
+    expect(solveMagic(new Array(9).fill(0), 3, 2).count).toBe(2);
+    expect(solveMagic([2, 7, 6, 9, 0, 1, 4, 3, 8], 3).count).toBe(1);
+    expect(solveMagic([2, 7, 6, 9, 0, 1, 4, 3, 8], 3).first).toEqual(LO_SHU);
+    // むじゅんする 問題は 0
+    expect(solveMagic([1, 0, 0, 0, 1, 0, 0, 0, 0], 3).count).toBe(0);
+    expect(solveMagic([5, 0, 0, 0, 0, 0, 0, 0, 0], 3).count).toBe(0);
+  });
+});
+
+describe('30 魔法陣パズル：生成（4レベル × 500シード）', () => {
+  for (const d of DIFFICULTIES) {
+    it(`${d}：大きさ・あきの 数・答えが 1つだけ・はじめの かずと 矛盾しない`, () => {
+      const conf = MAGIC_LEVELS[d];
+      let fallbacks = 0;
+      const keys = new Set<string>();
+      each<MagicPuzzle>(magicSquare, d, (p, fb) => {
+        if (fb) fallbacks++;
+        expect(magicSquare.validate(p, d)).toBeNull();
+        expect(p.n).toBe(conf.n);
+        const b = blankCount(p);
+        expect(b).toBeGreaterThanOrEqual(conf.blanks[0]);
+        expect(b).toBeLessThanOrEqual(conf.blanks[1]);
+        const r = solveMagic(p.givens, p.n, 2);
+        expect(r.aborted).toBe(false);
+        expect(r.count).toBe(1);
+        const sol = r.first!;
+        expect(isMagic(sol, p.n)).toBe(true);
+        p.givens.forEach((v, i) => v !== 0 && expect(sol[i]).toBe(v));
+        expect(magicSquare.judge(p, { cells: sol }).correct).toBe(true);
+        keys.add(magicSquare.key(p));
+      });
+      expect(fallbacks).toBe(0);
+      expect(keys.size).toBeGreaterThan(300);
+    });
+  }
+  it('予備の 問題も 検証を 通る', () => {
+    for (const d of DIFFICULTIES) {
+      const bank = magicSquare.fallback(d);
+      expect(bank.length).toBeGreaterThan(0);
+      for (const p of bank) expect(magicSquare.validate(p, d)).toBeNull();
+    }
+  });
+});
+
+describe('30 魔法陣パズル：判定と ヒント', () => {
+  const p: MagicPuzzle = { n: 3, givens: [2, 7, 0, 9, 5, 1, 4, 0, 0] };
+  const sol = [2, 7, 6, 9, 5, 1, 4, 3, 8];
+  it('お手本と くらべず、数学の 条件で 正解に する', () => {
+    // あきが 多い 問題で、お手本と ちがう 魔方陣でも 条件を みたせば 正解
+    const open: MagicPuzzle = { n: 3, givens: [0, 0, 0, 0, 5, 0, 0, 0, 0] };
+    const other = [8, 1, 6, 3, 5, 7, 4, 9, 2];
+    expect(isMagic(other, 3)).toBe(true);
+    expect(magicSquare.judge(open, { cells: other }).correct).toBe(true);
+    expect(magicSquare.judge(open, { cells: [...LO_SHU] }).correct).toBe(true);
+    expect(magicSquare.judge(p, { cells: sol }).correct).toBe(true);
+  });
+  it('うまって いない・おなじ かず・はじめの かずを かえた・合計ちがい は 正解に しない', () => {
+    expect(magicSquare.judge(p, { cells: [2, 7, 6, 9, 5, 1, 4, 0, 0] })).toMatchObject({ correct: false, message: expect.stringContaining('のこり 2') });
+    expect(magicSquare.judge(p, { cells: [2, 7, 6, 9, 5, 1, 4, 6, 8] })).toMatchObject({ correct: false, message: expect.stringContaining('おなじ かず') });
+    expect(magicSquare.judge(p, { cells: [3, 7, 6, 9, 5, 1, 4, 2, 8] })).toMatchObject({ correct: false, message: expect.stringContaining('はじめの かず') });
+    expect(magicSquare.judge(p, { cells: [2, 7, 8, 9, 5, 1, 4, 3, 6] })).toMatchObject({ correct: false, message: expect.stringMatching(/もうすこし！ (よこ|たて|ななめ)の ごうけいを みてみよう/) });
+    expect(magicSquare.judge(p, { cells: [2, 7, 6, 9, 5, 1, 4, 3, 10] }).correct).toBe(false);
+    expect(magicSquare.judge(p, { cells: [2, 7, 6, 9, 5, 1, 4, 3] }).correct).toBe(false);
+    expect(magicSquare.judge(p, undefined as never).correct).toBe(false);
+  });
+  it('列の 合計：うまって いない 列は「とちゅう」で 正解あつかい しない', () => {
+    const st = lineStatus(3, [2, 7, 0, 9, 5, 1, 4, 0, 0]);
+    expect(st[0]).toMatchObject({ sum: 9, empty: 1, complete: false, ok: false });
+    expect(st[1]).toMatchObject({ sum: 15, complete: true, ok: true });
+    // 途中で 15 でも complete で なければ ok に しない
+    const partial = lineStatus(3, [9, 6, 0, 0, 0, 0, 0, 0, 0]);
+    expect(partial[0]).toMatchObject({ sum: 15, complete: false, ok: false });
+  });
+  it('ヒント：1 目標と 見る せん、2 あきが すくない せん、3 1マスの てがかり', () => {
+    const cur = [...p.givens];
+    const h = magicSquare.hints(p, cur);
+    expect(h[0]).toContain('15');
+    const line = easiestLine(p, cur)!;
+    expect(line.empty).toBe(1);
+    expect(h[1]).toContain('あと 1こ');
+    // あきが 1つの せんは ひきざんで きまる
+    expect(h[2]).toMatch(/15 − \d+ = \d+/);
+    const val = Number(h[2].split('= ').at(-1));
+    expect(line.cells.some((i) => cur[i] === 0 && sol[i] === val)).toBe(true);
+    expect(magicSolution(p)).toEqual(sol);
+    // ぜんぶ うまったら ちがう せんを さがす ヒント
+    expect(magicSquare.hints(p, [2, 7, 8, 9, 5, 1, 4, 3, 6])[1]).toContain('ちがう せん');
+  });
+  it('4×4 の ヒント3は 答えの かずを 1つ おしえる（その マスを えらばせるだけ。かってに いれない）', () => {
+    const q = magicSquare.fallback('challenge')[0];
+    const h = magicSquare.hints(q, q.givens);
+    const sol4 = magicSolution(q)!;
+    expect(isMagic(sol4, 4)).toBe(true);
+    expect(h[2]).toMatch(/\d/);
+  });
+  it('登録：30 ・パズル・盤面型で つづきから', () => {
+    expect(GAME_BY_ID['magic-square']).toMatchObject({ no: '30', title: '魔法陣パズル', category: 'puzzle', kind: 'board', resumable: true });
   });
 });

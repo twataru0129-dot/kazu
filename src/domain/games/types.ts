@@ -30,7 +30,8 @@ export type GameId =
   | 'clock-master'
   | 'number-hunt'
   | 'pizza-fractions'
-  | 'block-builder';
+  | 'block-builder'
+  | 'magic-square';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 

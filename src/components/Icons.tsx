@@ -449,6 +449,22 @@ export function GameIcon({ id }: { id: GameId }) {
             <path d="M20 21 L32 27 L44 21" fill="none" stroke="#1b2838" strokeWidth="1" />
           </>
         );
+      case 'magic-square':
+        return (
+          <>
+            {[0, 1, 2].map((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={4 + c * 13} y={4 + r * 13} width="12" height="12" rx="2.5" fill={r === 1 && c === 1 ? '#ffe9a8' : '#f3f7fb'} stroke="#8fb3d9" />))}
+            {t(10, 14, '2', 8)}
+            {t(23, 14, '7', 8)}
+            {t(36, 14, '6', 8)}
+            {t(10, 27, '9', 8)}
+            {t(23, 27, '5', 8, '#d97706')}
+            {t(36, 27, '1', 8)}
+            {t(10, 40, '4', 8)}
+            {t(23, 40, '3', 8)}
+            {t(36, 40, '8', 8)}
+            <path d="M5 5 L42 42" stroke="#e8590c" strokeWidth="1.6" strokeDasharray="3 2" />
+          </>
+        );
       case 'vanishing-path':
         return (
           <>

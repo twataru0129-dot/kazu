@@ -29,6 +29,7 @@ import { clockMaster } from './clockMaster';
 import { numberHunt } from './numberHunt';
 import { pizzaFractions } from './pizzaFractions';
 import { blockBuilder } from './blockBuilder';
+import { magicSquare } from './magicSquare';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -236,6 +237,12 @@ export const GAMES: GameMeta[] = [
     description: 'おてほんの つみきを よく みて、おなじ かたちを つくろう。まわして いろんな むきから みられるよ。',
     difficultyNotes: { easy: '2×2・2だんまで・すうじつき', normal: '3×3・3だんまで', hard: '3×3・4だんまで', challenge: '4×4・4だんまで・すうじなし' },
     logic: blockBuilder,
+  },
+  {
+    id: 'magic-square', no: '30', title: '魔法陣パズル', category: 'puzzle', kind: 'board', resumable: true, input: 'マスを えらんで すうじ',
+    description: 'たて・よこ・ななめ、どの せんの ごうけいも おなじに なるように、あいた マスに すうじを いれよう。',
+    difficultyNotes: { easy: '3×3・あき2〜3・ごうけい15', normal: '3×3・あき4〜5', hard: '3×3・あき5〜6', challenge: '4×4・1〜16・ごうけい34' },
+    logic: magicSquare,
   },
 ];
 

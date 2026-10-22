@@ -10,6 +10,8 @@ import type { Difficulty } from '../domain/types';
 import { GAME_VIEWS } from './views';
 import type { PizzaPuzzle } from '../domain/games/pizzaFractions';
 import type { BlockPuzzle } from '../domain/games/blockBuilder';
+import type { MagicPuzzle } from '../domain/games/magicSquare';
+import { act } from '@testing-library/react';
 
 async function renderView(id: GameId, puzzle: unknown, extra: Record<string, unknown> = {}, difficulty: Difficulty = 'easy') {
   const repo = new Repo(memoryBackend());
@@ -264,5 +266,133 @@ describe('29 ブロック建築パズル（画面）', () => {
     expect(within(screen.getByTestId('block-model')).queryAllByText(/^[0-4]$/)).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'うえから' })).toBeNull();
     expect(within(screen.getByTestId('block-map')).getAllByRole('gridcell')).toHaveLength(16);
+  });
+});
+
+describe('30 魔法陣パズル（画面）', () => {
+  const p: MagicPuzzle = { n: 3, givens: [2, 7, 0, 9, 5, 1, 4, 0, 0] };
+  const cellEl = (i: number) => screen.getByTestId(`magic-cell-${i}`);
+  const num = (v: number) => screen.getByRole('button', { name: new RegExp(`^${v}(（つかった）)?$`) });
+
+  it('あいた マスに パレットで いれる。いれたら つぎの あきへ。はじめの かずは さわれない', async () => {
+    const { saveDraft } = await renderView('magic-square', p);
+    expect(cellEl(2).getAttribute('aria-selected')).toBe('true');
+    expect(cellEl(0)).toHaveProperty('disabled', true);
+    expect(screen.getByTestId('magic-remaining').textContent).toContain('3');
+    fireEvent.click(num(6));
+    expect(cellEl(2).textContent).toBe('6');
+    expect(cellEl(7).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('magic-remaining').textContent).toContain('2');
+    expect(saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ cells: [2, 7, 6, 9, 5, 1, 4, 0, 0], sel: 7 }));
+  });
+
+  it('つかった かずは えらべない（おなじ かずを 2かい おかない）', async () => {
+    await renderView('magic-square', p);
+    expect(num(2)).toHaveProperty('disabled', true);
+    expect(num(2).getAttribute('aria-label')).toBe('2（つかった）');
+    fireEvent.click(num(6));
+    expect(num(6)).toHaveProperty('disabled', true);
+    // えらんで いる マスに はいって いる かずは えらびなおせる（そのまま）
+    fireEvent.click(cellEl(2));
+    expect(num(6)).toHaveProperty('disabled', false);
+  });
+
+  it('列の 合計：うまって いない 列は「とちゅうの ごうけい」、うまって 15 なら できた', async () => {
+    await renderView('magic-square', p);
+    expect(screen.getByTestId('sum-0').getAttribute('data-state')).toBe('partial');
+    expect(screen.getByTestId('sum-0').getAttribute('aria-label')).toContain('とちゅうの ごうけい 9');
+    expect(screen.getByTestId('sum-1').getAttribute('data-state')).toBe('ok');
+    fireEvent.click(num(8));
+    expect(screen.getByTestId('sum-0').getAttribute('data-state')).toBe('ng');
+    expect(screen.getByTestId('sum-0').textContent).toContain('≠');
+  });
+
+  it('けす・もどす・こたえあわせ。まちがえても いれた かずは のこる', async () => {
+    const { results } = await renderView('magic-square', p);
+    fireEvent.click(num(8));
+    fireEvent.click(num(3));
+    fireEvent.click(num(6));
+    fireEvent.click(screen.getByRole('button', { name: 'こたえあわせ' }));
+    expect(results[0].correct).toBe(false);
+    expect(results[0].message).toContain('もうすこし！');
+    expect(cellEl(2).textContent).toBe('8');
+    fireEvent.click(cellEl(2));
+    fireEvent.click(screen.getByRole('button', { name: 'けす' }));
+    expect(cellEl(2).textContent).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'もどす' }));
+    expect(cellEl(2).textContent).toBe('8');
+    fireEvent.click(cellEl(2));
+    fireEvent.click(screen.getByRole('button', { name: 'けす' }));
+    fireEvent.click(cellEl(8));
+    fireEvent.click(screen.getByRole('button', { name: 'けす' }));
+    fireEvent.click(cellEl(2));
+    fireEvent.click(num(6));
+    fireEvent.click(cellEl(8));
+    fireEvent.click(num(8));
+    fireEvent.click(screen.getByRole('button', { name: 'こたえあわせ' }));
+    expect(results[1].correct).toBe(true);
+  });
+
+  it('キーボード：すうじ・矢印・Backspace', async () => {
+    await renderView('magic-square', p);
+    fireEvent.keyDown(window, { key: '6' });
+    expect(cellEl(2).textContent).toBe('6');
+    fireEvent.keyDown(window, { key: '7' }); // つかって いるので いれない
+    expect(cellEl(7).textContent).toBe('');
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(cellEl(8).getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(window, { key: '8' });
+    expect(cellEl(8).textContent).toBe('8');
+    // いれたら つぎの あき（7）へ。もどって けす
+    expect(cellEl(7).getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    fireEvent.keyDown(window, { key: 'Backspace' });
+    expect(cellEl(8).textContent).toBe('');
+  });
+
+  it('4×4 は 2けた（1 の あとに 0〜6）を まって いれる', async () => {
+    const q: MagicPuzzle = { n: 4, givens: [16, 3, 2, 13, 5, 10, 11, 8, 9, 6, 0, 12, 4, 0, 0, 0] };
+    await renderView('magic-square', q, {}, 'challenge');
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    expect(cellEl(10).getAttribute('aria-selected')).toBe('true');
+    // 1 だけ うって まつと 1
+    fireEvent.keyDown(window, { key: '1' });
+    expect(cellEl(10).textContent).toBe('');
+    act(() => vi.advanceTimersByTime(1000));
+    expect(cellEl(10).textContent).toBe('1');
+    // 1・5 で 15
+    expect(cellEl(13).getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(window, { key: '1' });
+    fireEvent.keyDown(window, { key: '5' });
+    expect(cellEl(13).textContent).toBe('15');
+    // 1・7 は 17 に ならない：1 は もう つかって いるので いれず、7 を あたらしく いれる
+    fireEvent.keyDown(window, { key: '1' });
+    fireEvent.keyDown(window, { key: '7' });
+    expect(cellEl(14).textContent).toBe('7');
+    // パレットは 16こ
+    expect(screen.getByRole('group', { name: 'かずを えらぶ' }).querySelectorAll('button')).toHaveLength(16);
+  });
+
+  it('ヒント2で あきの すくない せんを しめす（かってに いれない）', async () => {
+    const { rerender } = await renderView('magic-square', p);
+    rerender({ hintLevel: 2 });
+    const outlined = [0, 1, 2, 3, 4, 5, 6, 7].filter((li) => screen.getByTestId(`sum-${li}`).style.outline.includes('solid'));
+    expect(outlined).toHaveLength(1);
+    expect(cellEl(2).textContent).toBe('');
+  });
+
+  it('つづきから：下書きの かず・えらんだ マス・もどす記録。はじめの かずは 下書きで かわらない', async () => {
+    await renderView('magic-square', p, { draft: { cells: [9, 7, 6, 9, 5, 1, 4, 3, 0], sel: 8, history: [[2, 7, 6, 9, 5, 1, 4, 0, 0]] } });
+    expect(cellEl(0).textContent).toBe('2');
+    expect(cellEl(2).textContent).toBe('6');
+    expect(cellEl(7).textContent).toBe('3');
+    expect(cellEl(8).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'もどす' }));
+    expect(cellEl(7).textContent).toBe('');
+  });
+
+  it('easy は めあての 合計を いつも だす', async () => {
+    await renderView('magic-square', p);
+    expect(screen.getByTestId('magic-guide').textContent).toContain('15');
   });
 });
