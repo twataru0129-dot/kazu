@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createRng } from '../random';
 import { DIFFICULTIES, type Difficulty } from '../types';
 import { generatePuzzle } from './types';
-import { GAME_BY_ID } from './registry';
+import { GAMES, GAME_BY_ID } from './registry';
+import { MODES } from '../../config/theme';
 import {
   fracAdd,
   fracEq,
@@ -462,5 +463,20 @@ describe('30 魔法陣パズル：判定と ヒント', () => {
   });
   it('登録：30 ・パズル・盤面型で つづきから', () => {
     expect(GAME_BY_ID['magic-square']).toMatchObject({ no: '30', title: '魔法陣パズル', category: 'puzzle', kind: 'board', resumable: true });
+  });
+});
+
+describe('registry: 30 games', () => {
+  it('28〜30 を つづきの 番号で 登録。あそぶの 説明は 30こ', () => {
+    expect(GAMES).toHaveLength(30);
+    expect(GAMES.map((g) => g.no)).toEqual(Array.from({ length: 30 }, (_, i) => String(i + 1).padStart(2, '0')));
+    expect(new Set(GAMES.map((g) => g.id)).size).toBe(30);
+    expect(MODES.play.sub).toBe('30この すうじあそび');
+    for (const id of ['pizza-fractions', 'block-builder', 'magic-square'] as const) {
+      const g = GAME_BY_ID[id];
+      expect(g.logic.id).toBe(id);
+      expect(g.logic.generatorVersion).toBe(1);
+      for (const d of DIFFICULTIES) expect(g.difficultyNotes[d].length).toBeGreaterThan(0);
+    }
   });
 });
