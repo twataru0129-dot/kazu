@@ -8,9 +8,17 @@ import type { GameViewProps } from '../types';
 const R = 100;
 const pt = (deg: number, r: number) => [Math.sin((deg * Math.PI) / 180) * r, -Math.cos((deg * Math.PI) / 180) * r] as const;
 const wedge = (a0: number, a1: number, r: number) => {
+  // 180° ちょうどの 弧は 向きが きまらないので 2つに わけて えがく。
+  // 頂点が 中心の よこ線に ならぶと ブラウザの 当たり判定が ぬける ことが あるので、
+  // わける 位置を まんなかから ずらし、中心は ごく小さい 2点で とじる
+  const am = a0 + (a1 - a0) * 0.4;
+  const f = (n: number) => n.toFixed(2);
+  const [c0x, c0y] = pt(a0, 0.02);
+  const [c1x, c1y] = pt(a1, 0.02);
   const [x0, y0] = pt(a0, r);
+  const [xm, ym] = pt(am, r);
   const [x1, y1] = pt(a1, r);
-  return `M0 0 L${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+  return `M${c0x.toFixed(3)} ${c0y.toFixed(3)} L${f(x0)} ${f(y0)} A${r} ${r} 0 0 1 ${f(xm)} ${f(ym)} A${r} ${r} 0 0 1 ${f(x1)} ${f(y1)} L${c1x.toFixed(3)} ${c1y.toFixed(3)} Z`;
 };
 
 /** ピースの 中の 具（ペパロニ・バジル）。ピースの 角度の 中に 決まった 位置で おく */
