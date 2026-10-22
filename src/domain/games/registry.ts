@@ -28,6 +28,7 @@ import { vanishingPath } from './vanishingPath';
 import { clockMaster } from './clockMaster';
 import { numberHunt } from './numberHunt';
 import { pizzaFractions } from './pizzaFractions';
+import { blockBuilder } from './blockBuilder';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -229,6 +230,12 @@ export const GAMES: GameMeta[] = [
     description: 'ピザの ピースを えらんで、いわれた おおきさを つくろう。はんぶん・4ぶんの1 から、ぶんすうの たしざん・ひきざんまで。',
     difficultyNotes: { easy: '2・4・8きれ・はんぶん', normal: '3〜12きれ・2/3 や 3/4', hard: 'おなじ おおきさを つくる', challenge: 'ぶんすうの たしざん・ひきざん' },
     logic: pizzaFractions,
+  },
+  {
+    id: 'block-builder', no: '29', title: 'ブロック建築パズル', category: 'puzzle', kind: 'board', resumable: true, input: 'マスを えらんで ＋・−',
+    description: 'おてほんの つみきを よく みて、おなじ かたちを つくろう。まわして いろんな むきから みられるよ。',
+    difficultyNotes: { easy: '2×2・2だんまで・すうじつき', normal: '3×3・3だんまで', hard: '3×3・4だんまで', challenge: '4×4・4だんまで・すうじなし' },
+    logic: blockBuilder,
   },
 ];
 

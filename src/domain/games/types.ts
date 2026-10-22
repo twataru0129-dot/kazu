@@ -29,7 +29,8 @@ export type GameId =
   | 'vanishing-path'
   | 'clock-master'
   | 'number-hunt'
-  | 'pizza-fractions';
+  | 'pizza-fractions'
+  | 'block-builder';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 

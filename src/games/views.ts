@@ -28,6 +28,7 @@ import { VanishingPathView } from './views/VanishingPathView';
 import { ClockMasterView } from './views/ClockMasterView';
 import { NumberHuntView } from './views/NumberHuntView';
 import { PizzaFractionsView } from './views/PizzaFractionsView';
+import { BlockBuilderView } from './views/BlockBuilderView';
 
 /** ゲームID → ゲーム固有の画面。ドメインの登録表（registry）と対になる。 */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,4 +61,5 @@ export const GAME_VIEWS: Record<GameId, ComponentType<any>> = {
   'clock-master': ClockMasterView,
   'number-hunt': NumberHuntView,
   'pizza-fractions': PizzaFractionsView,
+  'block-builder': BlockBuilderView,
 };

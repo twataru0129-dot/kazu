@@ -9,6 +9,7 @@ import type { GameId, Judgement } from '../domain/games/types';
 import type { Difficulty } from '../domain/types';
 import { GAME_VIEWS } from './views';
 import type { PizzaPuzzle } from '../domain/games/pizzaFractions';
+import type { BlockPuzzle } from '../domain/games/blockBuilder';
 
 async function renderView(id: GameId, puzzle: unknown, extra: Record<string, unknown> = {}, difficulty: Difficulty = 'easy') {
   const repo = new Repo(memoryBackend());
@@ -129,5 +130,139 @@ describe('28 ピザで分数パズル（画面）', () => {
     for (const i of [0, 1, 2]) fireEvent.click(pieces()[i]);
     fireEvent.click(screen.getByRole('button', { name: 'これで できた！' }));
     expect(results[0].correct).toBe(true);
+  });
+});
+
+describe('29 ブロック建築パズル（画面）', () => {
+  const p: BlockPuzzle = { size: 2, maxH: 2, showNumbers: true, heights: [[1, 0], [2, 1]] };
+  const cell = (x: number, y: number) => within(screen.getByTestId('block-map')).getAllByRole('gridcell').find((b) => b.dataset.x === String(x) && b.dataset.y === String(y))!;
+  const plus = () => fireEvent.click(screen.getByRole('button', { name: '1だん ふやす' }));
+  const minus = () => fireEvent.click(screen.getByRole('button', { name: '1だん へらす' }));
+  const build = (h: number[][]) => {
+    h.forEach((row, y) =>
+      row.forEach((v, x) => {
+        fireEvent.click(cell(x, y));
+        for (let k = 0; k < v; k++) plus();
+      }),
+    );
+  };
+
+  it('じめんの マスを えらんで ＋・− 。0〜さいだいで とまる', async () => {
+    const { saveDraft } = await renderView('block-builder', p);
+    expect(within(screen.getByTestId('block-map')).getAllByRole('gridcell')).toHaveLength(4);
+    fireEvent.click(cell(1, 0));
+    expect(cell(1, 0).getAttribute('aria-selected')).toBe('true');
+    plus();
+    plus();
+    expect(screen.getByRole('button', { name: '1だん ふやす' })).toHaveProperty('disabled', true);
+    expect(screen.getByTestId('block-selected-height').textContent).toBe('2だん');
+    expect(cell(1, 0).textContent).toBe('2');
+    minus();
+    minus();
+    expect(screen.getByRole('button', { name: '1だん へらす' })).toHaveProperty('disabled', true);
+    expect(saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ heights: [[0, 0], [0, 0]], sel: { x: 1, y: 0 }, rot: 0 }));
+  });
+
+  it('おなじ かたちで 正解。まちがえても つんだ ものは のこる', async () => {
+    const { results } = await renderView('block-builder', p);
+    build([[1, 0], [2, 0]]);
+    fireEvent.click(screen.getByRole('button', { name: 'こたえあわせ' }));
+    expect(results[0].correct).toBe(false);
+    expect(cell(0, 1).textContent).toBe('2');
+    fireEvent.click(cell(1, 1));
+    plus();
+    fireEvent.click(screen.getByRole('button', { name: 'こたえあわせ' }));
+    expect(results[1].correct).toBe(true);
+  });
+
+  it('まわしても データと 判定は かわらない。地図も 立体と おなじ 向きで まわる', async () => {
+    const { results, saveDraft } = await renderView('block-builder', p);
+    build([[1, 0], [2, 1]]);
+    const before = within(screen.getByTestId('block-map')).getAllByRole('gridcell').map((b) => `${b.dataset.x}${b.dataset.y}`);
+    fireEvent.click(screen.getByRole('button', { name: 'みぎに まわす' }));
+    expect(screen.getByTestId('block-own').getAttribute('data-rot')).toBe('1');
+    expect(screen.getByTestId('block-model').getAttribute('data-rot')).toBe('1');
+    const after = within(screen.getByTestId('block-map')).getAllByRole('gridcell').map((b) => `${b.dataset.x}${b.dataset.y}`);
+    expect(after).not.toEqual(before);
+    expect([...after].sort()).toEqual([...before].sort());
+    expect(saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ heights: [[1, 0], [2, 1]], rot: 1 }));
+    fireEvent.click(screen.getByRole('button', { name: 'ひだりに まわす' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ひだりに まわす' }));
+    expect(screen.getByTestId('block-own').getAttribute('data-rot')).toBe('3');
+    fireEvent.click(screen.getByRole('button', { name: 'こたえあわせ' }));
+    expect(results[0].correct).toBe(true);
+  });
+
+  it('ひとつ もどす・やりなおす（たしかめて から）', async () => {
+    await renderView('block-builder', p);
+    build([[1, 0], [0, 0]]);
+    fireEvent.click(cell(1, 1));
+    plus();
+    fireEvent.click(screen.getByRole('button', { name: 'ひとつ もどす' }));
+    expect(cell(1, 1).textContent).toBe('0');
+    expect(cell(0, 0).textContent).toBe('1');
+    fireEvent.click(screen.getByRole('button', { name: 'やりなおす' }));
+    expect(screen.getByText('つんだ ブロックを ぜんぶ かたづけるよ。')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'やめる' }));
+    expect(cell(0, 0).textContent).toBe('1');
+    fireEvent.click(screen.getByRole('button', { name: 'やりなおす' }));
+    within(screen.getByRole('dialog')).getAllByRole('button', { name: 'やりなおす' }).forEach((b) => fireEvent.click(b));
+    expect(cell(0, 0).textContent).toBe('0');
+    // やりなおしも もどせる
+    fireEvent.click(screen.getByRole('button', { name: 'ひとつ もどす' }));
+    expect(cell(0, 0).textContent).toBe('1');
+  });
+
+  it('キーボード：矢印で えらび、＋・− で つむ', async () => {
+    await renderView('block-builder', p);
+    // はじめは まえの ひだり（0,1）
+    expect(cell(0, 1).getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(window, { key: '+' });
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(cell(0, 0).getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(window, { key: '+' });
+    fireEvent.keyDown(window, { key: '+' });
+    fireEvent.keyDown(window, { key: '-' });
+    expect(cell(0, 0).textContent).toBe('1');
+    expect(cell(0, 1).textContent).toBe('1');
+  });
+
+  it('つづきから：下書きの 形・えらんだ マス・向き・もどす記録を もどす', async () => {
+    await renderView('block-builder', p, { draft: { heights: [[1, 0], [2, 0]], sel: { x: 1, y: 1 }, rot: 2, history: [[[1, 0], [1, 0]]] } });
+    expect(cell(0, 1).textContent).toBe('2');
+    expect(cell(1, 1).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByTestId('block-own').getAttribute('data-rot')).toBe('2');
+    fireEvent.click(screen.getByRole('button', { name: 'ひとつ もどす' }));
+    expect(cell(0, 1).textContent).toBe('1');
+  });
+
+  it('こわれた 下書きは つかわない（はんいの そと）', async () => {
+    await renderView('block-builder', p, { draft: { heights: [[9, 0], [0, 0]], sel: { x: 5, y: 0 }, rot: 1.5, history: 'x' } });
+    expect(cell(0, 0).textContent).toBe('0');
+    expect(screen.getByTestId('block-own').getAttribute('data-rot')).toBe('0');
+  });
+
+  it('ヒント2で ちがう マスを 1つ しめす（かってに なおさない）', async () => {
+    const { rerender } = await renderView('block-builder', p);
+    build([[1, 0], [0, 0]]);
+    rerender({ hintLevel: 2 });
+    const marked = within(screen.getByTestId('block-map'))
+      .getAllByRole('gridcell')
+      .filter((b) => b.getAttribute('aria-label')!.includes('ちがう ところ'));
+    expect(marked).toHaveLength(1);
+    expect(marked[0].dataset.y).toBe('1');
+    expect(cell(0, 1).textContent).toBe('0');
+  });
+
+  it('easy は お手本に だんの すうじ、challenge は 出さない', async () => {
+    await renderView('block-builder', p);
+    expect(within(screen.getByTestId('block-model')).getAllByText(/^[0-2]$/)).toHaveLength(4);
+  });
+  it('challenge：すうじなし・うえからの てだすけ なし', async () => {
+    const q: BlockPuzzle = { size: 4, maxH: 4, showNumbers: false, heights: [[0, 1, 2, 3], [4, 0, 1, 2], [3, 4, 0, 1], [2, 3, 4, 1]] };
+    await renderView('block-builder', q, {}, 'challenge');
+    expect(within(screen.getByTestId('block-model')).queryAllByText(/^[0-4]$/)).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'うえから' })).toBeNull();
+    expect(within(screen.getByTestId('block-map')).getAllByRole('gridcell')).toHaveLength(16);
   });
 });

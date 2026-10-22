@@ -437,6 +437,18 @@ export function GameIcon({ id }: { id: GameId }) {
             <circle cx="33" cy="16" r="2.6" fill="#d6463f" />
           </>
         );
+      case 'block-builder':
+        return (
+          <>
+            <path d="M8 30 L20 24 L32 30 L20 36 Z" fill="#9fd3ff" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M8 30 V38 L20 44 V36 Z" fill="#5aa9e6" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M32 30 V38 L20 44 V36 Z" fill="#3b82c4" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M20 12 L32 6 L44 12 L32 18 Z" fill="#ffe28a" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M20 12 V30 L32 36 V18 Z" fill="#f2c230" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M44 12 V30 L32 36 V18 Z" fill="#c99a12" stroke="#1b2838" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M20 21 L32 27 L44 21" fill="none" stroke="#1b2838" strokeWidth="1" />
+          </>
+        );
       case 'vanishing-path':
         return (
           <>

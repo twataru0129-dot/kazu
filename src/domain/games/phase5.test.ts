@@ -17,6 +17,19 @@ import {
   slicesNeeded,
   type PizzaPuzzle,
 } from './pizzaFractions';
+import {
+  allTopsVisible,
+  BLOCK_LEVELS,
+  blockBuilder,
+  dataToView,
+  emptyHeights,
+  isSymmetric,
+  topVisible,
+  viewHeights,
+  viewToData,
+  wrongCells,
+  type BlockPuzzle,
+} from './blockBuilder';
 
 const SEEDS = 500;
 const each = <P,>(logic: Parameters<typeof generatePuzzle>[0], d: Difficulty, fn: (p: P, fallback: boolean) => void) => {
@@ -183,5 +196,120 @@ describe('28 ピザで分数パズル：判定', () => {
   it('登録：28 ・つくる・5もん セット', () => {
     expect(GAME_BY_ID['pizza-fractions']).toMatchObject({ no: '28', title: 'ピザで分数パズル', category: 'make', kind: 'set', resumable: false });
     expect(GAME_BY_ID['pizza-fractions'].logic.generatorVersion).toBe(1);
+  });
+});
+
+describe('29 ブロック建築パズル：生成（4レベル × 500シード）', () => {
+  for (const d of DIFFICULTIES) {
+    it(`${d}：大きさ・高さの はんい、宙に うかない 整数、複数の 列、ぜんぶ 同じ 高さで ない`, () => {
+      const conf = BLOCK_LEVELS[d];
+      let fallbacks = 0;
+      const keys = new Set<string>();
+      each<BlockPuzzle>(blockBuilder, d, (p, fb) => {
+        if (fb) fallbacks++;
+        expect(blockBuilder.validate(p, d)).toBeNull();
+        expect(p.size).toBe(conf.size);
+        expect(p.maxH).toBe(conf.maxH);
+        expect(p.showNumbers).toBe(d === 'easy');
+        expect(p.heights).toHaveLength(p.size);
+        const flat = p.heights.flat();
+        expect(flat).toHaveLength(p.size * p.size);
+        for (const v of flat) {
+          expect(Number.isInteger(v)).toBe(true);
+          expect(v).toBeGreaterThanOrEqual(0);
+          expect(v).toBeLessThanOrEqual(p.maxH);
+        }
+        expect(flat.filter((v) => v > 0).length).toBeGreaterThan(1);
+        expect(new Set(flat).size).toBeGreaterThan(1);
+        expect(allTopsVisible(p.heights)).toBe(true);
+        if (d === 'hard' || d === 'challenge') expect(isSymmetric(p.heights)).toBe(false);
+        keys.add(blockBuilder.key(p));
+        expect(blockBuilder.judge(p, { heights: p.heights.map((r) => [...r]) }).correct).toBe(true);
+      });
+      expect(fallbacks).toBe(0);
+      expect(keys.size).toBeGreaterThan(d === 'easy' ? 40 : 400);
+    });
+  }
+  it('むずかしい ほど ブロックが おおい（へいきん）', () => {
+    const avg = (d: Difficulty) => {
+      let t = 0;
+      each<BlockPuzzle>(blockBuilder, d, (p) => (t += p.heights.flat().reduce((a, b) => a + b, 0)));
+      return t / SEEDS;
+    };
+    const [e, n, h, c] = DIFFICULTIES.map(avg);
+    expect(e).toBeLessThan(n);
+    expect(n).toBeLessThan(h);
+    expect(h).toBeLessThan(c);
+  });
+});
+
+describe('29 ブロック建築パズル：判定・向き・ヒント', () => {
+  const p: BlockPuzzle = { size: 3, maxH: 3, showNumbers: false, heights: [[0, 1, 2], [1, 3, 0], [2, 0, 1]] };
+  it('ぴったり 同じ 表だけ 正解。ちがうと 数を やさしく つたえる', () => {
+    expect(blockBuilder.judge(p, { heights: [[0, 1, 2], [1, 3, 0], [2, 0, 1]] }).correct).toBe(true);
+    const j = blockBuilder.judge(p, { heights: [[0, 1, 2], [1, 2, 0], [2, 0, 0]] });
+    expect(j.correct).toBe(false);
+    expect(j.message).toContain('2か所');
+    // 合計が 同じでも 置き場所が ちがえば まちがい
+    expect(blockBuilder.judge(p, { heights: [[2, 1, 0], [0, 3, 1], [1, 0, 2]] }).correct).toBe(false);
+    // こわれた こたえ・はんいの そと・小数は 正解に しない
+    expect(blockBuilder.judge(p, { heights: [[0, 1, 2], [1, 3, 0]] }).correct).toBe(false);
+    expect(blockBuilder.judge(p, { heights: [[0, 1, 2], [1, 4, 0], [2, 0, 1]] }).correct).toBe(false);
+    expect(blockBuilder.judge(p, { heights: [[0, 1, 2], [1, 2.5, 0], [2, 0, 1]] }).correct).toBe(false);
+    expect(blockBuilder.judge(p, undefined as never).correct).toBe(false);
+  });
+  it('見る 向きを まわしても データは かわらず、4かい まわすと もとに もどる', () => {
+    for (const n of [2, 3, 4])
+      for (let r = 0; r < 4; r++) {
+        const seen = new Set<string>();
+        for (let i = 0; i < n; i++)
+          for (let j = 0; j < n; j++) {
+            const d = viewToData(n, r, i, j);
+            seen.add(`${d.x},${d.y}`);
+            expect(dataToView(n, r, d.x, d.y)).toEqual({ i, j });
+          }
+        expect(seen.size).toBe(n * n);
+      }
+    const before = JSON.stringify(p.heights);
+    const views = [0, 1, 2, 3].map((r) => viewHeights(p.heights, r));
+    expect(JSON.stringify(p.heights)).toBe(before);
+    expect(views[0]).toEqual(p.heights);
+    expect(views[1]).not.toEqual(views[0]);
+    // 合計は どの 向きでも 同じ
+    for (const v of views) expect(v.flat().reduce((a, b) => a + b, 0)).toBe(10);
+  });
+  it('手前の 高い 列に かくれた マスは、ほかの 向きなら 見える', () => {
+    // まんなか（1,1）の 0 は 手前の 4だんに かくれる
+    const h = [[0, 0, 0], [0, 0, 4], [0, 4, 4]];
+    expect(topVisible(h, 0, 1, 1)).toBe(false);
+    expect([1, 2, 3].some((r) => topVisible(h, r, 1, 1))).toBe(true);
+    // まわりを ぜんぶ たかく かこむと どの 向きでも 見えない → 出題しない
+    const boxed = [[4, 4, 4], [4, 0, 4], [4, 4, 4]];
+    expect(allTopsVisible(boxed)).toBe(false);
+    expect(blockBuilder.validate({ size: 3, maxH: 4, showNumbers: false, heights: boxed }, 'hard')).not.toBeNull();
+  });
+  it('対称・ぜんぶ同じ・1列だけ は はじく', () => {
+    expect(isSymmetric([[1, 2, 1], [2, 3, 2], [1, 2, 1]])).toBe(true);
+    expect(isSymmetric([[0, 1, 2], [1, 3, 0], [2, 0, 1]])).toBe(true); // ななめに うらがえすと 同じ
+    expect(isSymmetric([[0, 1, 2], [1, 3, 0], [2, 4, 1]])).toBe(false);
+    expect(blockBuilder.validate({ size: 3, maxH: 4, showNumbers: false, heights: [[1, 2, 1], [2, 4, 2], [1, 2, 1]] }, 'hard')).toBe('symmetric');
+    expect(blockBuilder.validate({ size: 2, maxH: 2, showNumbers: true, heights: [[2, 2], [2, 2]] }, 'easy')).not.toBeNull();
+    expect(blockBuilder.validate({ size: 2, maxH: 2, showNumbers: true, heights: [[2, 0], [0, 0]] }, 'easy')).not.toBeNull();
+    expect(blockBuilder.validate({ size: 2, maxH: 2, showNumbers: true, heights: [[3, 0], [1, 0]] }, 'easy')).not.toBeNull();
+  });
+  it('ヒント：1 向きの アドバイス、2 ちがう 1か所、3 えらんだ マスの ただしい だん', () => {
+    const cur = [[0, 1, 2], [1, 3, 0], [2, 0, 0]];
+    const h = blockBuilder.hints(p, { heights: cur, sel: { x: 1, y: 1 } });
+    expect(h[0]).toContain('まわす');
+    expect(h[0]).toContain('3だん');
+    expect(wrongCells(p, cur)).toEqual([{ x: 2, y: 2 }]);
+    expect(h[1]).toContain('まえから 1れつめ・ひだりから 3ばんめ');
+    expect(h[2]).toContain('3だん');
+    expect(blockBuilder.hints(p, { heights: p.heights, sel: null })[1]).toContain('ぜんぶ あって いる');
+    expect(blockBuilder.hints(p, undefined)[2]).toContain('マスを えらぶ');
+    expect(wrongCells(p, emptyHeights(3))).toHaveLength(6);
+  });
+  it('登録：29 ・パズル・盤面型で つづきから', () => {
+    expect(GAME_BY_ID['block-builder']).toMatchObject({ no: '29', title: 'ブロック建築パズル', category: 'puzzle', kind: 'board', resumable: true });
   });
 });
