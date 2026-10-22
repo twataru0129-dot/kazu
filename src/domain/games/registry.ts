@@ -27,6 +27,7 @@ import { shuffleCups } from './shuffleCups';
 import { vanishingPath } from './vanishingPath';
 import { clockMaster } from './clockMaster';
 import { numberHunt } from './numberHunt';
+import { pizzaFractions } from './pizzaFractions';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -222,6 +223,12 @@ export const GAMES: GameMeta[] = [
     description: 'ばらばらの すうじを ちいさい じゅんに さがして タップしよう。5かい つづけると おしまい。',
     difficultyNotes: { easy: '3×3・1〜9', normal: '4×4・1〜16', hard: '5×5・1〜25', challenge: '6×6・ばいすうも' },
     logic: numberHunt,
+  },
+  {
+    id: 'pizza-fractions', no: '28', title: 'ピザで分数パズル', category: 'make', kind: 'set', resumable: false, input: 'ピースを タップ',
+    description: 'ピザの ピースを えらんで、いわれた おおきさを つくろう。はんぶん・4ぶんの1 から、ぶんすうの たしざん・ひきざんまで。',
+    difficultyNotes: { easy: '2・4・8きれ・はんぶん', normal: '3〜12きれ・2/3 や 3/4', hard: 'おなじ おおきさを つくる', challenge: 'ぶんすうの たしざん・ひきざん' },
+    logic: pizzaFractions,
   },
 ];
 

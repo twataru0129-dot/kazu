@@ -28,7 +28,8 @@ export type GameId =
   | 'shuffle-cups'
   | 'vanishing-path'
   | 'clock-master'
-  | 'number-hunt';
+  | 'number-hunt'
+  | 'pizza-fractions';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 
