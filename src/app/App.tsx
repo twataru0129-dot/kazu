@@ -7,6 +7,7 @@ import { GamesListScreen } from '../screens/GamesListScreen';
 import { GameScreen } from '../games/GameScreen';
 import { isGameId } from '../domain/games/registry';
 import { CalcScreen } from '../screens/CalcScreen';
+import { GridCalcScreen } from '../screens/GridCalcScreen';
 import { LearnHome } from '../screens/learn/LearnHome';
 import { MulLesson } from '../screens/learn/MulLesson';
 import { DivLesson } from '../screens/learn/DivLesson';
@@ -51,6 +52,7 @@ function Routes() {
   const key = app.profile.id; // プロフィールが変わったら画面ごと作り直す（途中の状態を持ち越さない）
   if (path === '/home') return <HomeScreen key={key} />;
   if (path === '/calc') return <CalcScreen key={key} />;
+  if (path === '/calc/grid') return <GridCalcScreen key={key} />;
   if (path === '/play') return <GamesListScreen key={key} />;
   const g = match('/play/:id', path);
   if (g && isGameId(g.id)) return <GameScreen key={`${key}-${g.id}`} gameId={g.id} />;

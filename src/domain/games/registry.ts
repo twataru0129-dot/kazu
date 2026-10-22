@@ -25,6 +25,8 @@ import { lightSequence } from './lightSequence';
 import { netQuiz } from './netQuiz';
 import { shuffleCups } from './shuffleCups';
 import { vanishingPath } from './vanishingPath';
+import { clockMaster } from './clockMaster';
+import { numberHunt } from './numberHunt';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -208,6 +210,18 @@ export const GAMES: GameMeta[] = [
     description: 'みちを おぼえてね。みちが きえたら、スタートから ゴールまで となりの マスを じゅんに おそう。5かい つづけると おしまい。',
     difficultyNotes: { easy: '3×3・3〜4ほ', normal: '4×4・5〜6ほ', hard: '5×5・7〜8ほ', challenge: '7×7・13〜16ほ' },
     logic: vanishingPath,
+  },
+  {
+    id: 'clock-master', no: '26', title: 'とけいマスター', category: 'life', kind: 'set', resumable: false, input: 'えらぶ・はりを うごかす',
+    description: 'とけいを よもう。はりを うごかして じこくを つくったり、なんぷん たったかを かんがえたり しよう。',
+    difficultyNotes: { easy: 'なんじ・なんじはん', normal: '5ふんごと・はりを うごかす', hard: '1ぷんごと', challenge: 'なんぷん あと・まえ' },
+    logic: clockMaster,
+  },
+  {
+    id: 'number-hunt', no: '27', title: '数字をさがせ！', category: 'memory', kind: 'board', resumable: true, input: 'すうじを タップ',
+    description: 'ばらばらの すうじを ちいさい じゅんに さがして タップしよう。5かい つづけると おしまい。',
+    difficultyNotes: { easy: '3×3・1〜9', normal: '4×4・1〜16', hard: '5×5・1〜25', challenge: '6×6・ばいすうも' },
+    logic: numberHunt,
   },
 ];
 

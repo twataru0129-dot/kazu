@@ -296,7 +296,7 @@ describe('registry: 22 games and the memory category', () => {
     expect(GAME_BY_ID.nonogram.no).toBe('21');
     expect(GAME_BY_ID['light-sequence'].no).toBe('22');
     expect(CATEGORY_LABEL.memory).toBe('きおく・しゅうちゅう');
-    expect(GAMES.filter((g) => g.category === 'memory').map((g) => g.id)).toEqual(['symbol-memory', 'light-sequence', 'shuffle-cups', 'vanishing-path']);
+    expect(GAMES.filter((g) => g.category === 'memory').map((g) => g.id)).toEqual(['symbol-memory', 'light-sequence', 'shuffle-cups', 'vanishing-path', 'number-hunt']);
     expect(GAME_BY_ID.nonogram.category).toBe('puzzle');
     for (const id of ['symbol-memory', 'nonogram', 'light-sequence'] as const) {
       expect(GAME_BY_ID[id].kind).toBe('board');

@@ -131,6 +131,27 @@ describe('backup', () => {
     expect((await fresh.getSettings(a.id)).preferredDifficultyByGame['triangle-pattern']).toBe('hard');
   });
 
+  it('100マス計算（mode calculation + gameId grid-calc）と 26・27 の 記録・途中保存も export → import で のこり、プロフィールごとに わかれる', async () => {
+    const { repo, a, b } = await seeded();
+    const summary = { difficulty: 'hard', op: 'multiply', cells: 100, correct: 100, firstCorrect: 97, fixes: 1, timerOn: true, activeMs: 312000, perfect: false };
+    await repo.saveSession({ id: 'grid1', profileId: a.id, mode: 'calculation', gameId: 'grid-calc', createdAt: 'x', updatedAt: 'x', completedAt: 'y', status: 'completed', settingsSnapshot: {}, summary });
+    await repo.saveSession({ id: 'grid2', profileId: a.id, mode: 'calculation', gameId: 'grid-calc', createdAt: 'x2', updatedAt: 'x2', status: 'inProgress', settingsSnapshot: {}, activeDraft: { inputs: [['3']], activeMs: 1200 } });
+    await repo.saveAttempt({ ...attempt(a.id, 40, 'grid1'), op: 'multiply', gameId: 'grid-calc', levelKey: 'grid:hard:multiply', questionKey: 'grid' });
+    await repo.saveAttempt({ ...attempt(a.id, 41, 'g4'), mode: 'game', op: undefined, gameId: 'clock-master', questionKey: 'r200' });
+    await repo.saveAttempt({ ...attempt(b.id, 42, 'g5'), mode: 'game', op: undefined, gameId: 'number-hunt', questionKey: 'hunt', answerSnapshot: { last: { found: [], rounds: [], timerOn: true, timeMs: 5000 }, found: [] } });
+    const json = JSON.stringify(await exportBundle(repo));
+    const fresh = new Repo(memoryBackend());
+    const pv = await previewImport(fresh, json);
+    expect(pv.ok).toBe(true);
+    await applyImport(fresh, pv.bundle!, 'replace');
+    const sa = await fresh.listSessions(a.id);
+    expect(sa.find((x) => x.id === 'grid1')?.summary).toEqual(summary);
+    expect((await fresh.findDraft(a.id, 'calculation', 'grid-calc'))?.activeDraft).toEqual({ inputs: [['3']], activeMs: 1200 });
+    expect(await fresh.findDraft(b.id, 'calculation', 'grid-calc')).toBeUndefined(); // ほかの 人の 途中は よまない
+    expect((await fresh.listAttempts(a.id)).map((x) => x.gameId).filter(Boolean).sort()).toEqual(['clock-master', 'grid-calc']);
+    expect((await fresh.listAttempts(b.id)).map((x) => x.gameId).filter(Boolean)).toEqual(['number-hunt']);
+  });
+
   it('games 20〜22 (records with round details, drafts) survive export → replace import', async () => {
     const { repo, a } = await seeded();
     const rounds = [2, 3, 4, 5, 6].map((length) => ({ length, views: 1, retries: 0, cleared: true }));

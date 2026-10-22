@@ -961,3 +961,31 @@ html[data-motion='reduced'] *::after {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
+
+/* ---- ホームの 版の 表示（右下・うすい 灰色。ふつうの フッター） ---- */
+.app-version {
+  align-self: flex-end;
+  margin-top: -6px;
+  font-size: 0.72rem;
+  color: #9aa7b4;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+
+/* ---- 100マス：2だんの 数字キーと ボタン ---- */
+.pad.grid-pad {
+  grid-template-columns: repeat(6, 1fr);
+  max-width: 520px;
+}
+.pad.grid-pad .pad-submit {
+  grid-column: 6;
+  grid-row: 2;
+  font-size: 0.9rem;
+}
+.grid-actions .btn {
+  min-height: 44px;
+  font-size: 0.92rem;
+  line-height: 1.15;
+}

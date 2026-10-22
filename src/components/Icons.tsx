@@ -16,10 +16,11 @@ export const IconBack = () => (
     <path d="M28 12 L16 24 L28 36" {...stroke} />
   </S>
 );
+/** 設定（歯車）。太陽・照明に 見えない よう、歯の ある 輪と まんなかの 穴で かく */
 export const IconGear = () => (
   <S>
-    <circle cx="24" cy="24" r="6" {...stroke} />
-    <path d="M24 6v6M24 36v6M6 24h6M36 24h6M11 11l4 4M33 33l4 4M37 11l-4 4M15 33l-4 4" {...stroke} />
+    <path d="M20.62 9.90 L21.47 5.17 L26.53 5.17 L27.38 9.90 L31.58 11.64 L35.53 8.90 L39.10 12.47 L36.36 16.42 L38.10 20.62 L42.83 21.47 L42.83 26.53 L38.10 27.38 L36.36 31.58 L39.10 35.53 L35.53 39.10 L31.58 36.36 L27.38 38.10 L26.53 42.83 L21.47 42.83 L20.62 38.10 L16.42 36.36 L12.47 39.10 L8.90 35.53 L11.64 31.58 L9.90 27.38 L5.17 26.53 L5.17 21.47 L9.90 20.62 L11.64 16.42 L8.90 12.47 L12.47 8.90 L16.42 11.64 Z" {...stroke} strokeWidth={3} />
+    <circle cx="24" cy="24" r="5.5" {...stroke} strokeWidth={3} />
   </S>
 );
 export const IconSound = ({ on }: { on: boolean }) => (
@@ -392,6 +393,35 @@ export function GameIcon({ id }: { id: GameId }) {
               <path key={x} d={`M${x + 2} ${i === 1 ? 10 : 18} L${x + 10} ${i === 1 ? 10 : 18} L${x + 12} ${i === 1 ? 30 : 38} L${x} ${i === 1 ? 30 : 38} Z`} fill="#c0584c" stroke="#1b2838" strokeWidth="1.8" strokeLinejoin="round" />
             ))}
             <circle cx="24" cy="39" r="5" fill="#e8504f" stroke="#1b2838" strokeWidth="1.5" />
+          </>
+        );
+      case 'clock-master':
+        return (
+          <>
+            <circle cx="24" cy="24" r="19" fill="#fff" stroke="#1b2838" strokeWidth="3" />
+            {Array.from({ length: 12 }, (_, i) => {
+              const a = (i * Math.PI) / 6;
+              return <circle key={i} cx={24 + Math.sin(a) * 15} cy={24 - Math.cos(a) * 15} r={i % 3 === 0 ? 2 : 1.2} fill="#1b2838" />;
+            })}
+            <path d="M24 24 L24 13" stroke="#2a7fd0" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M24 24 L32 28" stroke="#c0392b" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="24" cy="24" r="2.5" fill="#1b2838" />
+          </>
+        );
+      case 'number-hunt':
+        return (
+          <>
+            {[0, 1, 2].map((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={4 + c * 14} y={4 + r * 14} width="12" height="12" rx="3" fill={r === 1 && c === 2 ? '#ffe9a8' : '#f3f7fb'} stroke="#c6d6e4" />))}
+            {t(10, 14, '7', 9)}
+            {t(24, 14, '2', 9)}
+            {t(38, 14, '9', 9)}
+            {t(10, 28, '4', 9)}
+            {t(24, 28, '1', 9)}
+            {t(38, 28, '3', 9, '#d97706')}
+            {t(10, 42, '6', 9)}
+            {t(24, 42, '8', 9)}
+            {t(38, 42, '5', 9)}
+            <circle cx="37" cy="25" r="8" fill="none" stroke="#d97706" strokeWidth="2.2" />
           </>
         );
       case 'vanishing-path':
