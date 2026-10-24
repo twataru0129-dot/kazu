@@ -23,7 +23,11 @@ for (const width of [320, 375, 390, 430, 820, 1280]) {
       for (const d of ['かんたん', 'チャレンジ']) {
         await page.getByRole('radio', { name: new RegExp(d) }).click();
         await page.getByRole('button', { name: 'はじめる' }).click();
-        await expect(page.getByRole('button', { name: 'ヒント' })).toBeVisible();
+        // 魔法陣の むずかしい・チャレンジは ヒントなし（v1.7.1）。ほかは ヒントあり
+        if (g === 'magic-square' && d === 'チャレンジ') {
+          await expect(page.getByRole('button', { name: 'ちがう もんだいに する' })).toBeVisible();
+          await expect(page.getByRole('button', { name: /ヒント/ })).toHaveCount(0);
+        } else await expect(page.getByRole('button', { name: 'ヒント' })).toBeVisible();
         await check(`${g}/${d}`);
         await page.getByRole('button', { name: 'もどる' }).click();
       }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useProfile } from '../app/AppContext';
 import { navigate } from '../app/router';
 import { play } from '../audio/sfx';
@@ -186,8 +186,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   const finishedRef = useRef(false);
   const [message, setMessage] = useState<{ text: string; kind: 'result' | 'warn' | 'good'; n: number } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const { ref: roomRef, height: roomH } = useRoom<HTMLDivElement>();
-  const listRef = useRef<HTMLOListElement>(null);
+  const { ref: roomRef, width: roomW } = useRoom<HTMLDivElement>();
 
   /** 途中の 状態を 保存（おわったら 記録と いっしょに 1かいだけ 書く） */
   const persist = useCallback(
@@ -308,17 +307,14 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // あたらしい けっかが 見える ように 履歴の いちばん下へ
-  useLayoutEffect(() => {
-    const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [state.guesses.length]);
-
   const finished = state.status !== 'playing';
   const left = questionsLeft(state);
   const canAsk = !finished && state.input.length === CODE_LENGTH;
-  // 2行ぶんより 小さく しない（それより せまい 画面では ページごと スクロール）
-  const historyMax = Math.max(88, roomH - 4);
+  // 履歴の 1マスの はばで 見せかたを かえる：ひろい→1行、すこし せまい→1行（つめる）、とても せまい→EAT・BITE を 2行めへ（文字は はぶかない）
+  // しきいは 文字の 大きさ（rem）で きめる（「文字を 大きく」でも はみ出さない）
+  const rem = typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) || 16 : 16;
+  const cellRem = (roomW - 4) / 2 / rem;
+  const density: Density = cellRem >= 12.6 ? 'wide' : cellRem >= 8.7 ? 'tight' : 'two-line';
 
   const pad = (
     <div className="stack" style={{ gap: 6 }} data-testid="detective-pad">
@@ -398,7 +394,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
       <DockLayout footer={finished ? endButtons : pad}>
         <section className="stack" style={{ gap: 8 }}>
           <div className="card stack" style={{ padding: '8px 12px', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="small" style={{ fontWeight: 800, lineHeight: 1.2, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                   ひみつの
@@ -416,7 +412,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
                       key={i}
                       aria-hidden
                       style={{
-                        width: 34,
+                        width: 32,
                         height: 42,
                         display: 'grid',
                         placeItems: 'center',
@@ -433,17 +429,17 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
                   ))}
                 </div>
               </div>
-              <span data-testid="detective-left" style={{ fontWeight: 900, fontSize: '1rem', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-                のこり <span style={{ fontSize: '1.4rem', color: left <= 3 && !finished ? '#c2410c' : '#1b2838' }}>{left}</span>かい
+              <span data-testid="detective-left" style={{ fontWeight: 900, fontSize: '0.92rem', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
+                のこり <span style={{ fontSize: '1.3rem', color: left <= 3 && !finished ? '#c2410c' : '#1b2838' }}>{left}</span>かい
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div
-                key={message?.n ?? 0}
+                key={finished ? 'end' : (message?.n ?? 0)}
                 role="status"
                 aria-live="polite"
-                data-testid="detective-message"
-                className={message && message.kind !== 'warn' ? 'pop' : undefined}
+                data-testid={finished ? 'detective-result' : 'detective-message'}
+                className={finished || (message && message.kind !== 'warn') ? 'pop' : undefined}
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -453,16 +449,41 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
                   justifyContent: 'center',
                   textAlign: 'center',
                   fontWeight: 900,
-                  fontSize: !message && !finished ? '0.85rem' : message?.kind === 'warn' ? '0.9rem' : '1.05rem',
+                  flexDirection: finished ? 'column' : 'row',
+                  fontSize: !message && !finished ? '0.85rem' : message?.kind === 'warn' && !finished ? '0.9rem' : '1rem',
                   lineHeight: 1.2,
-                  whiteSpace: 'nowrap',
+                  whiteSpace: 'normal',
                   padding: '2px 8px',
                   borderRadius: 12,
-                  background: !message ? 'transparent' : message.kind === 'warn' ? '#fff7ed' : message.kind === 'good' ? '#dcfce7' : '#f5f3ff',
-                  color: !message ? '#64748b' : message.kind === 'warn' ? '#9a3412' : '#1b2838',
+                  background: finished
+                    ? state.status === 'cleared'
+                      ? '#dcfce7'
+                      : '#f5f3ff'
+                    : !message
+                      ? 'transparent'
+                      : message.kind === 'warn'
+                        ? '#fff7ed'
+                        : message.kind === 'good'
+                          ? '#dcfce7'
+                          : '#f5f3ff',
+                  color: !message && !finished ? '#64748b' : message?.kind === 'warn' && !finished ? '#9a3412' : '#1b2838',
                 }}
               >
-                {finished ? resultText(state.guesses[state.guesses.length - 1]) : (message?.text ?? '3つ えらんで しつもんしよう')}
+                {finished ? (
+                  state.status === 'cleared' ? (
+                    <>
+                      <span style={{ fontSize: '1.2rem' }}>せいかい！</span>
+                      <span>{state.guesses.length}かいで あてたよ！</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: '1.2rem' }}>おしかったね！</span>
+                      <span>こたえは {state.secret} だったよ！</span>
+                    </>
+                  )
+                ) : (
+                  (message?.text ?? '3つ えらんで しつもんしよう')
+                )}
               </div>
               <button type="button" className="btn" onClick={() => setHelpOpen(true)} style={{ minHeight: 44, padding: '0 8px', whiteSpace: 'nowrap', fontSize: '0.85rem', flexShrink: 0 }}>
                 ？ あそびかた
@@ -470,23 +491,9 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
             </div>
           </div>
 
-          {finished && (
-            <div className="card stack center-text pop" data-testid="detective-result" style={{ gap: 4 }}>
-              {state.status === 'cleared' ? (
-                <>
-                  <h2 style={{ margin: 0 }}>せいかい！</h2>
-                  <p style={{ margin: 0, fontWeight: 800 }}>{state.guesses.length}かいで あてたよ！</p>
-                </>
-              ) : (
-                <>
-                  <h2 style={{ margin: 0 }}>おしかったね！</h2>
-                  <p style={{ margin: 0, fontWeight: 800 }}>こたえは {state.secret} だったよ！</p>
-                </>
-              )}
-            </div>
-          )}
-
-          <div ref={roomRef}>{state.guesses.length > 0 && <History guesses={state.guesses} maxHeight={historyMax} listRef={listRef} />}</div>
+          <div ref={roomRef}>
+            <History guesses={state.guesses} density={density} />
+          </div>
         </section>
       </DockLayout>
       {helpOpen && (
@@ -502,7 +509,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
 }
 
 /** EAT・BITE の 数（いろ と もじ の 両方で） */
-function Count({ kind, n }: { kind: 'eat' | 'bite'; n: number }) {
+function Count({ kind, n, small = false, tight = false }: { kind: 'eat' | 'bite'; n: number; small?: boolean; tight?: boolean }) {
   const eat = kind === 'eat';
   const color = eat ? EAT_COLOR : BITE_COLOR;
   return (
@@ -510,8 +517,8 @@ function Count({ kind, n }: { kind: 'eat' | 'bite'; n: number }) {
       style={{
         display: 'inline-flex',
         alignItems: 'baseline',
-        gap: 3,
-        padding: '2px 8px',
+        gap: small ? 2 : 3,
+        padding: tight ? '1px 2px' : small ? '1px 6px' : '2px 8px',
         borderRadius: 999,
         background: n > 0 ? (eat ? '#dcfce7' : '#fef3c7') : '#f1f5f9',
         color: n > 0 ? color : '#64748b',
@@ -519,46 +526,112 @@ function Count({ kind, n }: { kind: 'eat' | 'bite'; n: number }) {
         whiteSpace: 'nowrap',
       }}
     >
-      <span style={{ fontSize: '1.25rem' }}>{n}</span>
-      <span style={{ fontSize: '0.8rem' }}>{eat ? 'EAT' : 'BITE'}</span>
+      <span style={{ fontSize: small ? '1.05rem' : '1.25rem' }}>{n}</span>
+      <span style={{ fontSize: tight ? '0.62rem' : small ? '0.7rem' : '0.8rem' }}>{eat ? 'EAT' : 'BITE'}</span>
     </span>
   );
 }
 
-function History({ guesses, maxHeight, listRef }: { guesses: GuessRecord[]; maxHeight: number; listRef: RefObject<HTMLOListElement | null> }) {
+/**
+ * 質問の 履歴。10かいぶんの 枠を いつも 2れつ × 5だん（ひだり 1〜5かいめ・みぎ 6〜10かいめ）に ならべ、
+ * スクロール なしで ぜんぶ くらべられる ように する。まだの 枠は うすく 番号だけ（ふえても 位置が ずれない）。
+ */
+type Density = 'wide' | 'tight' | 'two-line';
+
+function History({ guesses, density }: { guesses: GuessRecord[]; density: Density }) {
+  const twoLine = density === 'two-line';
+  const tight = density === 'tight';
   return (
     <ol
-      ref={listRef}
       aria-label="しつもんの きろく"
       data-testid="detective-history"
-      style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4, maxHeight, overflowY: 'auto', overscrollBehavior: 'contain' }}
+      data-layout={density}
+      style={{
+        listStyle: 'none',
+        margin: 0,
+        padding: 0,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gridTemplateRows: `repeat(${MAX_QUESTIONS / 2}, auto)`,
+        gridAutoFlow: 'column',
+        gap: 4,
+      }}
     >
-      {guesses.map((g, i) => {
+      {Array.from({ length: MAX_QUESTIONS }, (_, i) => {
+        const g = guesses[i];
+        const no = (
+          <span className="small muted" style={{ fontWeight: 800, fontSize: tight ? '0.68rem' : '0.75rem', minWidth: tight ? '0.8em' : '1.2em', textAlign: 'right' }} aria-hidden>
+            {i + 1}
+          </span>
+        );
+        if (!g)
+          return (
+            <li
+              key={`e${i}`}
+              data-testid="detective-empty"
+              aria-hidden
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: twoLine ? '4px 8px' : '4px 8px',
+                minHeight: twoLine ? 58 : 38,
+                borderRadius: 10,
+                border: '1.5px dashed #e2e8f0',
+                opacity: 0.7,
+              }}
+            >
+              {no}
+            </li>
+          );
         const latest = i === guesses.length - 1;
+        const digits = (
+          <span style={{ fontSize: tight ? '0.98rem' : '1.2rem', fontWeight: 900, letterSpacing: tight ? 0 : '0.12em' }} aria-hidden>
+            {g.guess}
+          </span>
+        );
         return (
           <li
             key={g.guess}
             data-testid="detective-row"
+            data-latest={latest ? 'true' : undefined}
             aria-label={`${i + 1}かいめ ${g.guess.split('').join(' ')}：${g.eat} EAT ${g.bite} BITE`}
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr auto auto',
-              alignItems: 'center',
-              gap: 8,
-              padding: '6px 10px',
-              borderRadius: 12,
+              display: 'flex',
+              flexDirection: twoLine ? 'column' : 'row',
+              // 1行で 入りきらない ときは EAT・BITE を つぎの 行へ（文字を きらない）
+              flexWrap: twoLine ? 'nowrap' : 'wrap',
+              alignItems: twoLine ? 'stretch' : 'center',
+              gap: twoLine ? 2 : tight ? 2 : 5,
+              rowGap: 2,
+              padding: tight ? '4px 3px' : '4px 6px',
+              minHeight: twoLine ? 58 : 38,
+              borderRadius: 10,
               background: latest ? '#f5f3ff' : '#fff',
               border: latest ? '2px solid #7c3aed' : '1px solid #e2e8f0',
             }}
           >
-            <span className="small muted" style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>
-              {i + 1}かいめ
-            </span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '0.3em' }} aria-hidden>
-              {g.guess}
-            </span>
-            <Count kind="eat" n={g.eat} />
-            <Count kind="bite" n={g.bite} />
+            {twoLine ? (
+              <>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {no}
+                  {digits}
+                </span>
+                <span style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                  <Count kind="eat" n={g.eat} small />
+                  <Count kind="bite" n={g.bite} small />
+                </span>
+              </>
+            ) : (
+              <>
+                {no}
+                {digits}
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: tight ? 2 : 3 }}>
+                  <Count kind="eat" n={g.eat} small tight={tight} />
+                  <Count kind="bite" n={g.bite} small tight={tight} />
+                </span>
+              </>
+            )}
           </li>
         );
       })}

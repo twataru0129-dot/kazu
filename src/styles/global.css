@@ -40,6 +40,41 @@ body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
+/*
+ * 長押し対策（アプリ全体の 標準）：iPhone で 長押ししても 文字選択・「コピー／調べる／翻訳」の メニューが 出ないように、
+ * 文字選択を はじめから 止める。新しい 画面・ゲームも 何も しなくても この ルールに 入る。
+ * タッチ自体は 止めないので、スクロール・ドラッグ・タップ・長押しボタンは そのまま 使える。
+ * 入力欄・編集できる 所・コピーしてほしい 所（.selectable／data-selectable）だけ 例外に する（下）。
+ */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* 例外：文字を 入れる・なおす 所と、えらんで コピーして よい 所 */
+input,
+textarea,
+select,
+[contenteditable]:not([contenteditable='false']),
+.selectable,
+[data-selectable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* ボタン型の 入力（チェック・ラジオなど）は 文字選択 しない */
+input[type='button'],
+input[type='submit'],
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* アプリの 外への リンクは 長押しで リンクの メニューを 使える ように */
+a[href^='http'] {
+  -webkit-touch-callout: default;
+}
 body {
   min-height: 100dvh;
   /* 子ども向けの文は「わかち書き」。語の途中で改行せず、空白で改行する。
@@ -177,6 +212,7 @@ button {
   justify-content: center;
   gap: 8px;
   transition: transform 0.08s ease, background 0.15s;
+  -webkit-user-select: none;
   user-select: none;
 }
 .btn:active:not(:disabled) {
@@ -970,7 +1006,9 @@ html[data-motion='reduced'] *::after {
   color: #9aa7b4;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+  -webkit-user-select: text;
   user-select: text;
+  -webkit-touch-callout: default;
   overflow-wrap: anywhere;
 }
 

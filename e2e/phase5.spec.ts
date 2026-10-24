@@ -20,7 +20,10 @@ async function startGame(page: Page, id: string, level: string) {
   await page.goto(`/#/play/${id}`);
   await page.getByRole('radio', { name: new RegExp(level) }).click();
   await page.getByRole('button', { name: 'はじめる' }).click();
-  await expect(page.getByRole('button', { name: /ヒント/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ちがう もんだいに する' })).toBeVisible();
+  // ヒントは 魔法陣の むずかしい・チャレンジ だけ なし（v1.7.1）
+  if (id === 'magic-square' && (level === 'むずかしい' || level === 'チャレンジ')) await expect(page.getByRole('button', { name: /ヒント/ })).toHaveCount(0);
+  else await expect(page.getByRole('button', { name: /ヒント/ })).toBeVisible();
 }
 
 function readStore<T>(page: Page, store: string): Promise<T[]> {

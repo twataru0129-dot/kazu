@@ -39,7 +39,7 @@ export function RecordsPanel() {
   const good = strengths(allStats);
 
   const levelTable = (rows: typeof calcStats, label: string) => (
-    <div className="table-wrap">
+    <div className="table-wrap selectable">
       <table className="data">
         <thead>
           <tr>
@@ -113,7 +113,7 @@ export function RecordsPanel() {
         {grids.length === 0 ? (
           <p className="muted">まだ記録がありません</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap selectable">
             <table className="data" data-testid="grid-records">
               <thead>
                 <tr>
@@ -166,7 +166,7 @@ export function RecordsPanel() {
         {tests.length === 0 ? (
           <p className="muted">まだありません</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap selectable">
             <table className="data">
               <thead>
                 <tr>
@@ -210,7 +210,7 @@ export function RecordsPanel() {
         {games.length === 0 ? (
           <p className="muted">まだありません</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap selectable">
             <table className="data">
               <thead>
                 <tr>

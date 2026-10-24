@@ -121,7 +121,15 @@ for (const size of SIZES) {
       await expect(page.getByTestId('detective-slot-0')).toHaveText(wrong[2][0]);
       await expect(page.getByTestId('detective-left')).toContainText('8');
       // ひみつは 画面に 出て いない
-      expect((await page.locator('main').innerHTML()).includes(secret)).toBe(false);
+      // （見える 文字と 読みあげの ラベルだけを 見る。HTML の 色の 指定などの 数字とは まぎれない ように）
+      const shown = await page.locator('main').evaluate((root) => {
+        const out: string[] = [(root as HTMLElement).innerText];
+        const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let n = tw.nextNode(); n; n = tw.nextNode()) out.push(n.textContent ?? '');
+        root.querySelectorAll('[aria-label], [title], [alt]').forEach((el) => out.push(el.getAttribute('aria-label') ?? '', el.getAttribute('title') ?? '', el.getAttribute('alt') ?? ''));
+        return out;
+      });
+      expect(shown.filter((t) => t.includes(secret) || t.includes(secret.split('').join(' ')))).toEqual([]);
 
       // リロード → つづきから：同じ ひみつ・履歴・入力中・回数
       await page.waitForTimeout(500);

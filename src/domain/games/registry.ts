@@ -50,6 +50,8 @@ export interface GameMeta {
   /** 入力方法の説明（一覧用） */
   input: string;
   difficultyNotes: Record<Difficulty, string>;
+  /** ヒントを 出さない むずかしさ（ヒントボタン・ヒントの 表示を なくす。ない ときは どの むずかしさでも ヒントあり） */
+  noHintLevels?: readonly Difficulty[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   logic: GameLogic<any, any>;
 }
@@ -242,7 +244,9 @@ export const GAMES: GameMeta[] = [
   {
     id: 'magic-square', no: '30', title: '魔法陣パズル', category: 'puzzle', kind: 'board', resumable: true, input: 'マスを えらんで すうじ',
     description: 'たて・よこ・ななめ、どの せんの ごうけいも おなじに なるように、あいた マスに すうじを いれよう。',
-    difficultyNotes: { easy: '3×3・あき2〜3・ごうけい15', normal: '3×3・あき4〜5', hard: '3×3・あき5〜6', challenge: '4×4・1〜16・ごうけい34' },
+    difficultyNotes: { easy: '3×3・あき2〜3・ごうけい15', normal: '3×3・あき4〜5', hard: '3×3・あき5〜6・ヒントなし', challenge: '4×4・1〜16・ごうけい34・ヒントなし' },
+    // むずかしい・チャレンジは じぶんの 力で（たて・よこ・ななめの 合計の 表示は のこす）
+    noHintLevels: ['hard', 'challenge'],
     logic: magicSquare,
   },
   {
