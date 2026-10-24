@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { EngineGameId } from '../domain/games/registry';
 import type { GameId } from '../domain/games/types';
 import { DecomposeView } from './views/DecomposeView';
 import { PittariView } from './views/PittariView';
@@ -31,9 +32,9 @@ import { PizzaFractionsView } from './views/PizzaFractionsView';
 import { BlockBuilderView } from './views/BlockBuilderView';
 import { MagicSquareView } from './views/MagicSquareView';
 
-/** ゲームID → ゲーム固有の画面。ドメインの登録表（registry）と対になる。 */
+/** ゲームID → ゲーム固有の画面。ドメインの登録表（registry）と対になる（専用の 画面で あそぶ ゲームは ふくまない）。 */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const GAME_VIEWS: Record<GameId, ComponentType<any>> = {
+export const GAME_VIEWS: Record<EngineGameId, ComponentType<any>> & Partial<Record<GameId, ComponentType<any>>> = {
   decompose: DecomposeView,
   pittari: PittariView,
   make10: Make10View,

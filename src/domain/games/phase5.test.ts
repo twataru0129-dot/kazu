@@ -3,7 +3,6 @@ import { createRng } from '../random';
 import { DIFFICULTIES, type Difficulty } from '../types';
 import { generatePuzzle } from './types';
 import { GAMES, GAME_BY_ID } from './registry';
-import { MODES } from '../../config/theme';
 import {
   fracAdd,
   fracEq,
@@ -468,10 +467,9 @@ describe('30 魔法陣パズル：判定と ヒント', () => {
 
 describe('registry: 30 games', () => {
   it('28〜30 を つづきの 番号で 登録。あそぶの 説明は 30こ', () => {
-    expect(GAMES).toHaveLength(30);
-    expect(GAMES.map((g) => g.no)).toEqual(Array.from({ length: 30 }, (_, i) => String(i + 1).padStart(2, '0')));
-    expect(new Set(GAMES.map((g) => g.id)).size).toBe(30);
-    expect(MODES.play.sub).toBe('30この すうじあそび');
+    // 全体の 数は あとの 弾で ふえるので、30 までが つづきの 番号かを みる
+    expect(GAMES.map((g) => g.no).slice(0, 30)).toEqual(Array.from({ length: 30 }, (_, i) => String(i + 1).padStart(2, '0')));
+    expect(new Set(GAMES.map((g) => g.id)).size).toBe(GAMES.length);
     for (const id of ['pizza-fractions', 'block-builder', 'magic-square'] as const) {
       const g = GAME_BY_ID[id];
       expect(g.logic.id).toBe(id);

@@ -31,7 +31,8 @@ export type GameId =
   | 'number-hunt'
   | 'pizza-fractions'
   | 'block-builder'
-  | 'magic-square';
+  | 'magic-square'
+  | 'number-detective';
 
 export type GameCategory = 'make' | 'compare' | 'life' | 'puzzle' | 'memory';
 

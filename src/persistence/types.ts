@@ -63,6 +63,8 @@ export interface UserSettings {
   preferredDifficultyByGame: Record<string, Difficulty>;
   lastCalcSettings?: unknown;
   lastTestSettings?: unknown;
+  /** 31 すうじたんてい の 出題じゅん（720とおりの どこまで 出したか）。読むときに 形を たしかめる */
+  numberDetectiveDeck?: unknown;
 }
 
 export const defaultSettings = (profileId: string): UserSettings => ({

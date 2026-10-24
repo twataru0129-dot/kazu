@@ -449,6 +449,21 @@ export function GameIcon({ id }: { id: GameId }) {
             <path d="M20 21 L32 27 L44 21" fill="none" stroke="#1b2838" strokeWidth="1" />
           </>
         );
+      case 'number-detective':
+        return (
+          <>
+            {[0, 1, 2].map((k) => (
+              <rect key={k} x={4 + k * 12} y={8} width="10" height="13" rx="2.5" fill="#fff" stroke="#1b2838" strokeWidth="1.5" />
+            ))}
+            {t(9, 18, '?', 9, '#7c3aed')}
+            {t(21, 18, '?', 9, '#7c3aed')}
+            {t(33, 18, '?', 9, '#7c3aed')}
+            <circle cx="22" cy="33" r="8" fill="#e0f2fe" stroke="#1b2838" strokeWidth="2.5" />
+            <path d="M28 39 L37 46" stroke="#1b2838" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="40" cy="30" r="3.5" fill="#22c55e" stroke="#1b2838" strokeWidth="1.2" />
+            <circle cx="40" cy="40" r="3.5" fill="#f59e0b" stroke="#1b2838" strokeWidth="1.2" />
+          </>
+        );
       case 'magic-square':
         return (
           <>

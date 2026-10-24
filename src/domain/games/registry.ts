@@ -30,6 +30,7 @@ import { numberHunt } from './numberHunt';
 import { pizzaFractions } from './pizzaFractions';
 import { blockBuilder } from './blockBuilder';
 import { magicSquare } from './magicSquare';
+import { numberDetective } from './numberDetective';
 
 /**
  * ゲーム登録表。一覧・カテゴリ・起動はすべてここから決まる。
@@ -244,7 +245,18 @@ export const GAMES: GameMeta[] = [
     difficultyNotes: { easy: '3×3・あき2〜3・ごうけい15', normal: '3×3・あき4〜5', hard: '3×3・あき5〜6', challenge: '4×4・1〜16・ごうけい34' },
     logic: magicSquare,
   },
+  {
+    // むずかしさは 1つだけ（専用の 画面で あそぶ。むずかしさの 選択・ヒントボタンは 出さない）
+    id: 'number-detective', no: '31', title: 'すうじたんてい', category: 'compare', kind: 'board', resumable: true, input: 'すうじボタン',
+    description: 'ひみつの 3つの すうじを、10かい までの しつもんで あてよう。EAT と BITE が てがかり だよ。',
+    difficultyNotes: { easy: '3つの すうじ・10かい', normal: '3つの すうじ・10かい', hard: '3つの すうじ・10かい', challenge: '3つの すうじ・10かい' },
+    logic: numberDetective,
+  },
 ];
+
+/** 専用の 画面で あそぶ ゲーム（共通の ゲーム画面・むずかしさ・ヒントを つかわない） */
+export const STANDALONE_GAMES = ['number-detective'] as const satisfies readonly GameId[];
+export type EngineGameId = Exclude<GameId, (typeof STANDALONE_GAMES)[number]>;
 
 export const GAME_BY_ID: Record<GameId, GameMeta> = Object.fromEntries(GAMES.map((g) => [g.id, g])) as Record<GameId, GameMeta>;
 
