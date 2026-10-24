@@ -332,7 +332,11 @@ function GamePlayer({
     [meta.logic, saveAttempt, persistDraft],
   );
 
+  // このゲーム・むずかしさで ヒントを 使えるか（使えない ときは ボタンも パネルも 出さず、回数も ふやさない）
+  const hintsOn = !meta.noHintLevels?.includes(difficulty);
+
   const takeHint = () => {
+    if (!hintsOn) return;
     const r = { ...roundRef.current, hints: Math.min(3, roundRef.current.hints + 1) };
     setRound(r);
     roundRef.current = r;
@@ -388,7 +392,7 @@ function GamePlayer({
           {feedback.text}
         </Feedback>
       )}
-      <HintPanel hints={hints} level={round.hints} />
+      {hintsOn && <HintPanel hints={hints} level={round.hints} />}
     </>
   );
 
@@ -416,7 +420,7 @@ function GamePlayer({
             </button>
           ) : (
             <>
-              <HintButton level={round.hints} onClick={takeHint} disabled={round.solved && !explore} />
+              {hintsOn && <HintButton level={round.hints} onClick={takeHint} disabled={round.solved && !explore} />}
               {round.solved ? (
                 <button type="button" className="btn good big" onClick={() => goNext(false)}>
                   {index + 1 >= total ? 'おわり' : 'つぎへ'} →
@@ -437,7 +441,7 @@ function GamePlayer({
         submit={submit}
         solved={round.solved && !explore}
         found={round.found}
-        hintLevel={round.hints}
+        hintLevel={hintsOn ? round.hints : 0}
         draft={viewDraft}
         saveDraft={saveDraft}
         reportProgress={setProgress}
