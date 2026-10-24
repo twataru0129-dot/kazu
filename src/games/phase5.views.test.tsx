@@ -260,12 +260,121 @@ describe('29 ブロック建築パズル（画面）', () => {
     await renderView('block-builder', p);
     expect(within(screen.getByTestId('block-model')).getAllByText(/^[0-2]$/)).toHaveLength(4);
   });
-  it('challenge：すうじなし・うえからの てだすけ なし', async () => {
+  it('challenge：すうじなし（うえから みても 出さない）', async () => {
     const q: BlockPuzzle = { size: 4, maxH: 4, showNumbers: false, heights: [[0, 1, 2, 3], [4, 0, 1, 2], [3, 4, 0, 1], [2, 3, 4, 1]] };
     await renderView('block-builder', q, {}, 'challenge');
     expect(within(screen.getByTestId('block-model')).queryAllByText(/^[0-4]$/)).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: 'うえから' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'うえから みる（おてほんと じぶん）' }));
+    expect(screen.getByTestId('block-model').getAttribute('data-view')).toBe('top');
+    expect(within(screen.getByTestId('block-model')).queryAllByText(/^[0-4]$/)).toHaveLength(0);
     expect(within(screen.getByTestId('block-map')).getAllByRole('gridcell')).toHaveLength(16);
+  });
+});
+
+describe('29 ブロック建築パズル：うえから みる（v1.6.1）', () => {
+  const toggle = () => fireEvent.click(screen.getByRole('button', { name: 'うえから みる（おてほんと じぶん）' }));
+  const view = (id: string) => screen.getByTestId(id).getAttribute('data-view');
+  const rotOf = (id: string) => screen.getByTestId(id).getAttribute('data-rot');
+  /** 上から 見た 図の マス（データの 位置で） */
+  const topCell = (id: string, x: number, y: number) => screen.getByTestId(id).querySelector<SVGGElement>(`[data-testid="top-cell"][data-x="${x}"][data-y="${y}"]`)!;
+  const mapCell = (x: number, y: number) => within(screen.getByTestId('block-map')).getAllByRole('gridcell').find((b) => b.dataset.x === String(x) && b.dataset.y === String(y))!;
+  /** だんごとの うえの 面の いろ（1 あお・2 みどり・3 きいろ・4 あか） */
+  const TOP_COLOR = ['#9fd3ff', '#a8e6b8', '#ffe28a', '#ffb3a1'];
+  const ring = (center: number): BlockPuzzle => ({ size: 3, maxH: 4, showNumbers: false, heights: [[4, 4, 4], [4, center, 4], [4, 4, 4]] });
+
+  const levels: [Difficulty, BlockPuzzle][] = [
+    ['easy', { size: 2, maxH: 2, showNumbers: true, heights: [[1, 0], [2, 1]] }],
+    ['normal', { size: 3, maxH: 3, showNumbers: false, heights: [[0, 1, 2], [1, 3, 0], [2, 0, 1]] }],
+    ['hard', ring(1)],
+    ['challenge', { size: 4, maxH: 4, showNumbers: false, heights: [[0, 1, 2, 3], [4, 0, 1, 2], [3, 4, 0, 1], [2, 3, 4, 1]] }],
+  ];
+  for (const [d, q] of levels)
+    it(`${d}：「うえから」で お手本と じぶんが いっしょに きりかわり、もう いちど おすと 立体に もどる`, async () => {
+      await renderView('block-builder', q, {}, d);
+      const btn = screen.getByRole('button', { name: 'うえから みる（おてほんと じぶん）' });
+      expect(btn.getAttribute('aria-pressed')).toBe('false');
+      expect([view('block-model'), view('block-own')]).toEqual(['iso', 'iso']);
+      toggle();
+      expect(btn.getAttribute('aria-pressed')).toBe('true');
+      expect([view('block-model'), view('block-own')]).toEqual(['top', 'top']);
+      expect(screen.getByTestId('block-model').querySelectorAll('[data-testid="top-cell"]')).toHaveLength(q.size * q.size);
+      toggle();
+      expect([view('block-model'), view('block-own')]).toEqual(['iso', 'iso']);
+    });
+
+  for (const center of [0, 1, 2, 3])
+    it(`まわりが 4だんで まんなかが ${center}だん：うえから みると まんなかの ようすと 高さの いろが わかる（すうじは 出さない）`, async () => {
+      await renderView('block-builder', ring(center), {}, 'hard');
+      toggle();
+      const c = topCell('block-model', 1, 1);
+      expect(c.getAttribute('data-h')).toBe(String(center));
+      expect(c.getAttribute('data-empty')).toBe(center === 0 ? 'true' : 'false');
+      if (center > 0) expect(c.getAttribute('data-color')).toBe(TOP_COLOR[center - 1]);
+      // 0だんは 点線の 空きマス（いろだけに たよらない）
+      if (center === 0) expect(c.querySelector('polygon')!.getAttribute('stroke-dasharray')).toBeTruthy();
+      // まわりの 4だんは あか。まんなかと 見わけが つく
+      expect(topCell('block-model', 0, 0).getAttribute('data-color')).toBe(TOP_COLOR[3]);
+      expect(within(screen.getByTestId('block-model')).queryAllByText(/^[0-4]$/)).toHaveLength(0);
+      // どの 向きに まわしても まんなかは おなじ
+      for (let k = 0; k < 4; k++) {
+        fireEvent.click(screen.getByRole('button', { name: 'みぎに まわす' }));
+        expect(topCell('block-model', 1, 1).getAttribute('data-h')).toBe(String(center));
+      }
+    });
+
+  it('うえからの まま まわせて、立体に もどしても 向きは そのまま。ブロックは かわらない', async () => {
+    const q: BlockPuzzle = { size: 2, maxH: 2, showNumbers: true, heights: [[1, 0], [2, 1]] };
+    const { saveDraft } = await renderView('block-builder', q);
+    fireEvent.click(mapCell(1, 1));
+    fireEvent.click(screen.getByRole('button', { name: '1だん ふやす' }));
+    toggle();
+    fireEvent.click(screen.getByRole('button', { name: 'みぎに まわす' }));
+    expect([rotOf('block-model'), rotOf('block-own')]).toEqual(['1', '1']);
+    // 上から 見た 図の 置き場所も まわった 向きで ならぶ（データの 位置は かわらない）
+    expect(topCell('block-own', 1, 1).getAttribute('data-h')).toBe('1');
+    toggle();
+    expect([view('block-model'), view('block-own')]).toEqual(['iso', 'iso']);
+    expect([rotOf('block-model'), rotOf('block-own')]).toEqual(['1', '1']);
+    expect(mapCell(1, 1).textContent).toBe('1');
+    expect(saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ heights: [[0, 0], [0, 1]], rot: 1, top: false }));
+  });
+
+  it('うえからの じぶんの マスを タップして えらび、＋・−・もどすが つかえる', async () => {
+    const { saveDraft, results } = await renderView('block-builder', ring(2), {}, 'hard');
+    toggle();
+    fireEvent.click(topCell('block-own', 1, 1));
+    expect(mapCell(1, 1).getAttribute('aria-selected')).toBe('true');
+    const plus = () => fireEvent.click(screen.getByRole('button', { name: '1だん ふやす' }));
+    plus();
+    plus();
+    plus();
+    fireEvent.click(screen.getByRole('button', { name: '1だん へらす' }));
+    expect(topCell('block-own', 1, 1).getAttribute('data-h')).toBe('2');
+    fireEvent.click(screen.getByRole('button', { name: 'ひとつ もどす' }));
+    expect(topCell('block-own', 1, 1).getAttribute('data-h')).toBe('3');
+    fireEvent.click(screen.getByRole('button', { name: 'ひとつ もどす' }));
+    expect(topCell('block-own', 1, 1).getAttribute('data-h')).toBe('2');
+    expect(saveDraft).toHaveBeenLastCalledWith(expect.objectContaining({ sel: { x: 1, y: 1 }, top: true }));
+    // まわりを つんで こたえあわせ（向きを かえても 判定は おなじ）
+    for (const [x, y] of [[0, 0], [1, 0], [2, 0], [0, 1], [2, 1], [0, 2], [1, 2], [2, 2]]) {
+      fireEvent.click(topCell('block-own', x, y));
+      for (let k = 0; k < 4; k++) plus();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'ひだりに まわす' }));
+    fireEvent.click(screen.getByRole('button', { name: 'こたえあわせ' }));
+    expect(results.at(-1)!.correct).toBe(true);
+  });
+
+  it('つづきから：うえからの まま・向き・形が もどる。v1.6.0 の 下書き（top なし）は 立体で ひらく', async () => {
+    const q = ring(1);
+    const { view: v1 } = await renderView('block-builder', q, { draft: { heights: [[4, 4, 0], [0, 0, 0], [0, 0, 0]], sel: { x: 1, y: 1 }, rot: 3, history: [], top: true } }, 'hard');
+    expect([view('block-model'), view('block-own')]).toEqual(['top', 'top']);
+    expect(rotOf('block-own')).toBe('3');
+    expect(topCell('block-own', 0, 0).getAttribute('data-h')).toBe('4');
+    v1.unmount();
+    await renderView('block-builder', q, { draft: { heights: [[4, 4, 0], [0, 0, 0], [0, 0, 0]], sel: { x: 1, y: 1 }, rot: 3, history: [] } }, 'hard');
+    expect([view('block-model'), view('block-own')]).toEqual(['iso', 'iso']);
+    expect(mapCell(0, 0).textContent).toBe('4');
   });
 });
 

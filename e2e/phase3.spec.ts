@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createProfile } from './helpers';
 import { netAnswers, type NetQuizAnswer, type NetQuizPuzzle } from '../src/domain/games/netQuiz';
 import { arrangementAfter, positionOf, type ShuffleCupsPuzzle } from '../src/domain/games/shuffleCups';
-import type { VanishingPathPuzzle } from '../src/domain/games/vanishingPath';
+import { checkStep, isNeighbor, type VanishingPathPuzzle } from '../src/domain/games/vanishingPath';
 
 /** ゲーム 23〜25 を、iPhone 相当〜PC の画面で 実際の操作で さいごまで遊べること（答えは 保存された 問題から 計算する） */
 
@@ -15,6 +15,26 @@ const SIZES = [
   { name: '1280×800', width: 1280, height: 800, mobile: false },
 ];
 const SIDE_NAME = ['みぎ', 'した', 'ひだり', 'うえ'];
+
+type Cell = [number, number];
+/**
+ * 「まちがえたら スタートから」を ためす 場所と、押す まちがいの マス。
+ * 道は ランダムなので、3マスめ（index 2）から 順に、盤の 中で 道の 前後でも ない となりが ある 場所を さがす
+ * （道は 前後 以外の 自分と くっつかないので、そこは かならず 道の そと）。
+ * 道の 中の どこにも ない とき（ありえないが 念のため）は、ひとつ 前の マスに もどる タップを つかう（ゲームでは これも まちがい）。
+ * どちらでも「いまの マスの となり」で「つぎの マスでは ない」ことを checkStep で たしかめる。
+ */
+function pickWrongStep(path: readonly Cell[], size: number): { index: number; wrong: Cell } {
+  const inBoard = ([r, c]: Cell) => r >= 0 && c >= 0 && r < size && c < size;
+  const near = ([r, c]: Cell): Cell[] => ([[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]] as Cell[]).filter(inBoard);
+  const same = (a: Cell, b: Cell) => a[0] === b[0] && a[1] === b[1];
+  for (let k = 2; k < path.length - 1; k++) {
+    const off = near(path[k]).find((x) => !same(x, path[k - 1]) && !same(x, path[k + 1]));
+    if (off) return { index: k, wrong: off };
+  }
+  return { index: 2, wrong: path[1] };
+}
+
 
 async function startGame(page: Page, id: string, level: string) {
   await page.goto('/#/play');
@@ -81,6 +101,37 @@ const answerLabel = (p: NetQuizPuzzle, a: NonNullable<NetQuizAnswer>) => {
   const cell = `うえから ${r + 1}ばんめ ひだりから ${c + 1}ばんめの めん`;
   return new RegExp(`^${a.kind === 'face' ? cell : `${cell}の ${SIDE_NAME[a.side]}の へん`}`);
 };
+
+test.describe('25 きえる みち：まちがいの マスの えらびかた（ランダムな 道でも こわれない）', () => {
+  const p7 = (path: Cell[]): VanishingPathPuzzle => ({ size: 7, rounds: [path] }) as unknown as VanishingPathPuzzle;
+  const check = (path: Cell[], size = 7) => {
+    const m = pickWrongStep(path, size);
+    expect(m.index).toBeGreaterThanOrEqual(2);
+    expect(m.index).toBeLessThan(path.length - 1);
+    expect(isNeighbor(path[m.index], m.wrong)).toBe(true);
+    expect(m.wrong).not.toEqual(path[m.index + 1]);
+    expect(checkStep(p7(path), 0, m.index, m.wrong)).toBe('wrong');
+    return m;
+  };
+  test('3マスめが 角：となりは 前と つぎ だけ → つぎの 角でない 場所で まちがえる', () => {
+    const path: Cell[] = [[0, 2], [0, 1], [0, 0], [1, 0], [2, 0], [2, 1], [2, 2]];
+    const m = check(path);
+    expect(m.index).toBe(3);
+    expect(m.wrong).toEqual([1, 1]);
+  });
+  test('ふつうの 場所：3マスめで 道の そとの となりを 押す', () => {
+    const path: Cell[] = [[3, 0], [3, 1], [3, 2], [3, 3], [2, 3], [1, 3]];
+    const m = check(path);
+    expect(m.index).toBe(2);
+    expect(path.some((x) => x[0] === m.wrong[0] && x[1] === m.wrong[1])).toBe(false);
+  });
+  test('どこにも 道の そとの となりが ない 道（2×2）：ひとつ 前に もどる タップで まちがえる', () => {
+    const path: Cell[] = [[0, 0], [0, 1], [1, 1], [1, 0]];
+    const m = pickWrongStep(path, 2);
+    expect(m).toEqual({ index: 2, wrong: [0, 1] });
+    expect(checkStep({ size: 2, rounds: [path] } as unknown as VanishingPathPuzzle, 0, 2, m.wrong)).toBe('wrong');
+  });
+});
 
 for (const size of SIZES) {
   test.describe(size.name, () => {
@@ -196,17 +247,12 @@ for (const size of SIZES) {
       // ゴールへ とびこしても すすまない
       await cell(p.rounds[0].at(-1)!).click();
       await expect(page.getByTestId('path-message')).toContainText('となり');
-      // 2マス すすんでから まちがえる → スタートから
-      await cell(p.rounds[0][1]).click();
-      await cell(p.rounds[0][2]).click();
-      const [r1, c1] = p.rounds[0][2];
-      const wrong = ([
-        [r1 + 1, c1],
-        [r1 - 1, c1],
-        [r1, c1 + 1],
-        [r1, c1 - 1],
-      ] as [number, number][]).find(([r, c]) => r >= 0 && c >= 0 && r < p.size && c < p.size && !p.rounds[0].slice(1, 4).some((x) => x[0] === r && x[1] === c))!;
-      await cell(wrong).click();
+      // まちがいを 押せる 場所まで すすんでから まちがえる → スタートから（道が 角を とおっても こわれない）
+      const miss = pickWrongStep(p.rounds[0], p.size);
+      expect(checkStep(p, 0, miss.index, miss.wrong)).toBe('wrong');
+      for (const c of p.rounds[0].slice(1, miss.index + 1)) await cell(c).click();
+      await expect(cell(p.rounds[0][miss.index])).toHaveAttribute('aria-label', /いま いる ところ/);
+      await cell(miss.wrong).click();
       await expect(page.getByTestId('path-message')).toContainText('スタートから');
       await expect(cell(p.rounds[0][0])).toHaveAttribute('aria-label', /いま いる ところ/);
       for (let k = 0; k < 5; k++) {

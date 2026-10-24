@@ -317,7 +317,7 @@ describe('29 ブロック建築パズル：判定・向き・ヒント', () => {
   it('ヒント：1 向きの アドバイス、2 ちがう 1か所、3 えらんだ マスの ただしい だん', () => {
     const cur = [[0, 1, 2], [1, 3, 0], [2, 0, 0]];
     const h = blockBuilder.hints(p, { heights: cur, sel: { x: 1, y: 1 } });
-    expect(h[0]).toContain('まわす');
+    expect(h[0]).toContain('ひだり・みぎに まわしたり、うえから みたりして、ブロックの かたちを たしかめよう');
     expect(h[0]).toContain('3だん');
     expect(wrongCells(p, cur)).toEqual([{ x: 2, y: 2 }]);
     expect(h[1]).toContain('まえから 1れつめ・ひだりから 3ばんめ');
