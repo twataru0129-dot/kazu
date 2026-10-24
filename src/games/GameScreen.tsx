@@ -7,7 +7,7 @@ import { GameIcon } from '../components/Icons';
 import { DockLayout } from '../components/Dock';
 import { Feedback, HintButton, HintPanel, ProgressDots, SoundToggle, SpeakButton, TopBar } from '../components/ui';
 import { createRng, newId, randomSeed } from '../domain/random';
-import { GAME_BY_ID, SET_SIZE, type GameMeta } from '../domain/games/registry';
+import { GAME_BY_ID, SET_SIZE, type EngineGameId, type GameMeta } from '../domain/games/registry';
 import { generatePuzzle, type GameId, type Judgement } from '../domain/games/types';
 import { DIFFICULTIES, DIFFICULTY_LABEL, type Difficulty } from '../domain/types';
 import { nowIso } from '../persistence/repo';
@@ -184,7 +184,7 @@ function GamePlayer({
   onQuit(): void;
 }) {
   const { profile, repo } = useProfile();
-  const View = GAME_VIEWS[meta.id] as ComponentType<GameViewProps<unknown, unknown>>;
+  const View = GAME_VIEWS[meta.id as EngineGameId] as ComponentType<GameViewProps<unknown, unknown>>;
   const total = meta.kind === 'set' ? SET_SIZE : 1;
   const sessionRef = useRef<Session>(
     resume?.session ?? {

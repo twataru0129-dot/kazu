@@ -8,6 +8,7 @@ import { GameScreen } from '../games/GameScreen';
 import { isGameId } from '../domain/games/registry';
 import { CalcScreen } from '../screens/CalcScreen';
 import { GridCalcScreen } from '../screens/GridCalcScreen';
+import { NumberDetectiveScreen } from '../screens/NumberDetectiveScreen';
 import { LearnHome } from '../screens/learn/LearnHome';
 import { MulLesson } from '../screens/learn/MulLesson';
 import { DivLesson } from '../screens/learn/DivLesson';
@@ -55,6 +56,7 @@ function Routes() {
   if (path === '/calc/grid') return <GridCalcScreen key={key} />;
   if (path === '/play') return <GamesListScreen key={key} />;
   const g = match('/play/:id', path);
+  if (g && g.id === 'number-detective') return <NumberDetectiveScreen key={key} />;
   if (g && isGameId(g.id)) return <GameScreen key={`${key}-${g.id}`} gameId={g.id} />;
   if (path === '/learn') return <LearnHome key={key} />;
   if (path === '/learn/mul') return <MulLesson key={key} />;
