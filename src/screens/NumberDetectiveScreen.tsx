@@ -314,7 +314,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   // しきいは 文字の 大きさ（rem）で きめる（「文字を 大きく」でも はみ出さない）
   const rem = typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) || 16 : 16;
   const cellRem = (roomW - 4) / 2 / rem;
-  const density: Density = cellRem >= 11.5 ? 'wide' : cellRem >= 8.7 ? 'tight' : 'two-line';
+  const density: Density = cellRem >= 12.6 ? 'wide' : cellRem >= 8.7 ? 'tight' : 'two-line';
 
   const pad = (
     <div className="stack" style={{ gap: 6 }} data-testid="detective-pad">
@@ -518,7 +518,7 @@ function Count({ kind, n, small = false, tight = false }: { kind: 'eat' | 'bite'
         display: 'inline-flex',
         alignItems: 'baseline',
         gap: small ? 2 : 3,
-        padding: tight ? '1px 3px' : small ? '1px 6px' : '2px 8px',
+        padding: tight ? '1px 2px' : small ? '1px 6px' : '2px 8px',
         borderRadius: 999,
         background: n > 0 ? (eat ? '#dcfce7' : '#fef3c7') : '#f1f5f9',
         color: n > 0 ? color : '#64748b',
@@ -560,7 +560,7 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
       {Array.from({ length: MAX_QUESTIONS }, (_, i) => {
         const g = guesses[i];
         const no = (
-          <span className="small muted" style={{ fontWeight: 800, fontSize: tight ? '0.68rem' : '0.75rem', minWidth: tight ? '1em' : '1.2em', textAlign: 'right' }} aria-hidden>
+          <span className="small muted" style={{ fontWeight: 800, fontSize: tight ? '0.68rem' : '0.75rem', minWidth: tight ? '0.8em' : '1.2em', textAlign: 'right' }} aria-hidden>
             {i + 1}
           </span>
         );
@@ -586,7 +586,7 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
           );
         const latest = i === guesses.length - 1;
         const digits = (
-          <span style={{ fontSize: tight ? '1.02rem' : '1.2rem', fontWeight: 900, letterSpacing: tight ? 0 : '0.12em' }} aria-hidden>
+          <span style={{ fontSize: tight ? '0.98rem' : '1.2rem', fontWeight: 900, letterSpacing: tight ? 0 : '0.12em' }} aria-hidden>
             {g.guess}
           </span>
         );
@@ -599,9 +599,12 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
             style={{
               display: 'flex',
               flexDirection: twoLine ? 'column' : 'row',
+              // 1行で 入りきらない ときは EAT・BITE を つぎの 行へ（文字を きらない）
+              flexWrap: twoLine ? 'nowrap' : 'wrap',
               alignItems: twoLine ? 'stretch' : 'center',
               gap: twoLine ? 2 : tight ? 2 : 5,
-              padding: tight ? '4px 4px' : '4px 6px',
+              rowGap: 2,
+              padding: tight ? '4px 3px' : '4px 6px',
               minHeight: twoLine ? 58 : 38,
               borderRadius: 10,
               background: latest ? '#f5f3ff' : '#fff',
