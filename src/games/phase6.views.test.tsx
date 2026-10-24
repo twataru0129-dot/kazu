@@ -164,8 +164,14 @@ describe('31 すうじたんてい（画面）：あそぶ', () => {
     for (const g of wrongGuesses(secret, 3)) enter(g);
     expect(screen.getByTestId('detective-secret').getAttribute('aria-label')).toBe('ひみつの すうじ（まだ ないしょ）');
     expect(screen.getByTestId('detective-secret').textContent).toBe('？？？');
-    expect(view.container.innerHTML.includes(secret)).toBe(false);
-    expect(view.container.innerHTML.includes(secret.split('').join(' '))).toBe(false);
+    // 見える 文字と 読みあげの ラベル（HTML の 色の 指定などの 数字とは まぎれない ように）
+    const root = view.container;
+    const shown: string[] = [root.textContent ?? ''];
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) shown.push(n.textContent ?? '');
+    root.querySelectorAll('[aria-label], [title], [alt]').forEach((el) => shown.push(el.getAttribute('aria-label') ?? '', el.getAttribute('title') ?? '', el.getAttribute('alt') ?? ''));
+    expect(shown.slice(1).filter((t) => t.includes(secret) || t.includes(secret.split('').join(' ')))).toEqual([]);
+    expect(screen.getByTestId('detective-secret').textContent).toBe('？？？');
   });
 });
 
