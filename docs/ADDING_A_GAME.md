@@ -39,6 +39,7 @@ export const clock: GameLogic<ClockPuzzle, number | null> = {
 ## 4. 画面を書く（`src/games/views/ClockView.tsx`）
 
 `GameViewProps<Puzzle, Answer>` を受け取るコンポーネントを作り、`src/games/views.ts` の `GAME_VIEWS` に登録します。
+共通のゲーム画面（難しさ・3段階ヒント・正解で おわる）に合わない ゲームは、`registry.ts` の `STANDALONE_GAMES` に入れ、専用の画面を `src/app/App.tsx` の `/play/:id` の前に つなぎます（例：31 すうじたんてい）。
 
 - 正誤は必ず `submit(answer)` で判定する（画面で答えを計算し直さない）
 - `status`（フィードバックとヒント）を入力欄の近くに置く
