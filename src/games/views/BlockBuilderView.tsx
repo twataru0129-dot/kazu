@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { cloneHeights, dataToView, emptyHeights, ISO_RISE, totalBlocks, viewHeights, viewToData, wrongCells, type BlockAnswer, type BlockPuzzle } from '../../domain/games/blockBuilder';
 import { play } from '../../audio/sfx';
 import { InDock } from '../../components/Dock';
@@ -15,6 +15,8 @@ interface Draft {
   sel: Cell | null;
   rot: number;
   history: number[][][];
+  /** うえから 見て いるか（v1.6.1 から。ない 下書きは 立体） */
+  top?: boolean;
 }
 
 const HISTORY = 60;
@@ -111,6 +113,7 @@ function IsoBlocks({
       aria-label={label}
       data-testid={testId}
       data-rot={rot}
+      data-view="iso"
       style={{ display: 'block', maxWidth: '100%', touchAction: 'manipulation' }}
     >
       {/* 方角（さきに えがくので、おくの ラベルは 高い ブロックの うしろに なる） */}
@@ -184,12 +187,19 @@ export function BlockBuilderView({ puzzle: p, difficulty, submit, solved, status
   const [rot, setRot] = useState(() => (Number.isInteger(draft?.rot) ? ((draft!.rot % 4) + 4) % 4 : 0));
   const [history, setHistory] = useState<number[][][]>(() => (Array.isArray(draft?.history) ? draft.history.filter(valid).slice(-HISTORY) : []));
   const [asking, setAsking] = useState(false);
-  const [topDown, setTopDown] = useState(false);
+  const [topView, setTopView] = useState(() => draft?.top === true);
   const { ref, width: roomW, height: roomH } = useRoom<HTMLDivElement>();
 
   useEffect(() => reportProgress({ heights, sel }), [heights, sel, reportProgress]);
 
-  const persist = (h: number[][], s: Cell | null, r: number, hist: number[][][]) => saveDraft({ heights: h, sel: s, rot: r, history: hist });
+  const persist = (h: number[][], s: Cell | null, r: number, hist: number[][][], t = topView) => saveDraft({ heights: h, sel: s, rot: r, history: hist, top: t });
+  // 見かたを かえるだけ（つんだ ブロック・向き・えらんだ マスは そのまま）
+  const toggleTop = () => {
+    play('tap');
+    const t = !topView;
+    setTopView(t);
+    persist(heights, sel, rot, history, t);
+  };
 
   const change = (delta: number) => {
     if (solved || !sel) return;
@@ -364,17 +374,30 @@ export function BlockBuilderView({ puzzle: p, difficulty, submit, solved, status
       >
         −
       </button>
+      {/* うえから：お手本と じぶんを いっしょに きりかえる（どの むずかしさでも） */}
+      <button
+        type="button"
+        className={`chip${topView ? ' active' : ''}`}
+        aria-pressed={topView}
+        aria-label="うえから みる（おてほんと じぶん）"
+        data-testid="block-topview-toggle"
+        onClick={toggleTop}
+        style={{ minHeight: 44, minWidth: 56, fontSize: '0.8rem', padding: '2px 8px', fontWeight: 800, whiteSpace: 'nowrap' }}
+      >
+        {topView ? '✓ うえから' : 'うえから'}
+      </button>
     </div>
   );
 
   const showNumbers = p.showNumbers;
+  const viewWord = topView ? '（うえ）' : '';
   const model = (
     <figure style={{ margin: 0, position: 'relative' }}>
       <figcaption className="small" style={{ position: 'absolute', left: 0, top: 0, fontWeight: 800 }}>
-        おてほん
+        おてほん{viewWord}
       </figcaption>
-      {topDown ? (
-        <TopDown heights={p.heights} rot={rot} size={Math.min(box.w, box.h)} />
+      {topView ? (
+        <TopView heights={p.heights} rot={rot} width={box.w} height={box.h} label="おてほんの つみき" showNumbers={showNumbers} sel={difficulty === 'challenge' ? null : sel} testId="block-model" />
       ) : (
         <IsoBlocks
           heights={p.heights}
@@ -390,25 +413,18 @@ export function BlockBuilderView({ puzzle: p, difficulty, submit, solved, status
       )}
       <div style={{ position: 'absolute', left: 0, bottom: 0 }}>{roundBtn('ひだりに まわす', '↺', () => turn(-1))}</div>
       <div style={{ position: 'absolute', right: 0, bottom: 0 }}>{roundBtn('みぎに まわす', '↻', () => turn(1))}</div>
-      {(difficulty === 'easy' || difficulty === 'normal') && (
-        <button
-          type="button"
-          className={`chip${topDown ? ' active' : ''}`}
-          aria-pressed={topDown}
-          onClick={() => setTopDown((t) => !t)}
-          style={{ position: 'absolute', left: 0, top: 20, minHeight: 32, fontSize: '0.75rem', padding: '2px 8px' }}
-        >
-          うえから
-        </button>
-      )}
     </figure>
   );
   const own = (
     <figure style={{ margin: 0, position: 'relative' }}>
       <figcaption className="small" style={{ position: 'absolute', left: 0, top: 0, fontWeight: 800 }}>
-        じぶん（{totalBlocks(heights)}こ）
+        じぶん{viewWord} {totalBlocks(heights)}こ
       </figcaption>
-      <IsoBlocks heights={heights} maxH={p.maxH} rot={rot} width={box.w} height={box.h} label="じぶんの つみき" sel={sel} marks={marks} onPick={solved ? undefined : pick} testId="block-own" />
+      {topView ? (
+        <TopView heights={heights} rot={rot} width={box.w} height={box.h} label="じぶんの つみき" sel={sel} marks={marks} onPick={solved ? undefined : pick} testId="block-own" />
+      ) : (
+        <IsoBlocks heights={heights} maxH={p.maxH} rot={rot} width={box.w} height={box.h} label="じぶんの つみき" sel={sel} marks={marks} onPick={solved ? undefined : pick} testId="block-own" />
+      )}
     </figure>
   );
 
@@ -461,14 +477,113 @@ function placeName(n: number, rot: number, i: number, j: number) {
   return `まえから ${n - d.y}れつめ・ひだりから ${d.x + 1}ばんめ`;
 }
 
-/** うえから 見た 図（easy・normal の てだすけ）。ブロックが ある ところだけ ぬる（だんの かずは 出さない） */
-function TopDown({ heights, rot, size }: { heights: number[][]; rot: number; size: number }): ReactNode {
+/** 真上から 見た 点 (u,v)（見る 向きの 0〜n）を 画面へ。立体と おなじ 向きの ひしがた（つぶさない 正方形） */
+const top2d = (u: number, v: number): [number, number] => [u - v, u + v];
+
+/**
+ * 真上から 見た 図。立体と おなじ 向き・おなじ 大きさで、お手本と じぶんの 両方に つかう。
+ * 0だん は 点線の 空きマス、1だん 以上は いちばん うえの だんの いろ（立体の うえの 面と おなじ）。
+ */
+function TopView({
+  heights,
+  rot,
+  width,
+  height,
+  label,
+  showNumbers,
+  sel,
+  marks = [],
+  onPick,
+  testId,
+}: {
+  heights: number[][];
+  rot: number;
+  width: number;
+  height: number;
+  label: string;
+  showNumbers?: boolean;
+  sel?: Cell | null;
+  marks?: Cell[];
+  onPick?: (c: Cell) => void;
+  testId: string;
+}) {
   const n = heights.length;
   const g = viewHeights(heights, rot);
-  const c = size / (n + 1);
+  const m = 1.15;
+  // 立体の 図と おなじ 縦横比の 箱の まんなかに おく
+  const side = 2 * n + 2 * m;
+  const aspect = width / Math.max(1, height);
+  const vbW = Math.max(side, side * aspect);
+  const vbH = Math.max(side, side / aspect);
+  const vb = { x: -vbW / 2, y: n - vbH / 2, w: vbW, h: vbH };
+  const fs = Math.max(0.3, Math.min(0.55, (10 * vb.w) / Math.max(1, width)));
+  const cellPts = (i: number, j: number, inset = 0) => pts([top2d(i + inset, j + inset), top2d(i + 1 - inset, j + inset), top2d(i + 1 - inset, j + 1 - inset), top2d(i + inset, j + 1 - inset)]);
+  const outline = (c: Cell, color: string, dash?: string, key?: string) => {
+    const { i, j } = dataToView(n, rot, c.x, c.y);
+    return <polygon key={key} points={cellPts(i, j, 0.04)} fill="none" stroke={color} strokeWidth={0.14} strokeDasharray={dash} strokeLinejoin="round" pointerEvents="none" />;
+  };
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="うえから みた ところ" data-testid="block-topdown">
-      {g.map((row, j) => row.map((v, i) => <rect key={`${i}${j}`} x={c / 2 + i * c} y={c / 2 + j * c} width={c - 3} height={c - 3} rx={4} fill={v > 0 ? '#5aa9e6' : '#f3f7fb'} stroke="#b8c7d6" />))}
+    <svg
+      viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`}
+      width={width}
+      height={height}
+      role="img"
+      aria-label={`${label}（うえから）`}
+      data-testid={testId}
+      data-rot={rot}
+      data-view="top"
+      style={{ display: 'block', maxWidth: '100%', touchAction: 'manipulation' }}
+    >
+      {g.map((row, j) =>
+        row.map((v, i) => {
+          const d = viewToData(n, rot, i, j);
+          const pick = onPick ? () => onPick(d) : undefined;
+          const common = { 'data-x': d.x, 'data-y': d.y, 'data-h': v, onClick: pick, style: { cursor: pick ? 'pointer' : undefined } };
+          if (v === 0)
+            return (
+              <g key={`c${i}${j}`} data-testid="top-cell" data-empty="true" {...common}>
+                <polygon points={cellPts(i, j)} fill="#f8fafc" stroke="#94a3b8" strokeWidth={0.06} strokeDasharray="0.18 0.12" />
+                <circle cx={top2d(i + 0.5, j + 0.5)[0]} cy={top2d(i + 0.5, j + 0.5)[1]} r={0.09} fill="#b8c7d6" />
+              </g>
+            );
+          const [light, mid, dark] = LEVEL_COLORS[Math.min(v, LEVEL_COLORS.length) - 1];
+          return (
+            <g key={`c${i}${j}`} data-testid="top-cell" data-empty="false" data-color={light} {...common}>
+              <polygon points={cellPts(i, j)} fill={mid} stroke="#1b2838" strokeWidth={0.06} strokeLinejoin="round" />
+              <polygon points={cellPts(i, j, 0.14)} fill={light} stroke={dark} strokeWidth={0.04} />
+            </g>
+          );
+        }),
+      )}
+      {marks.map((c, k) => outline(c, '#e8590c', '0.25 0.15', `m${k}`))}
+      {sel && outline(sel, '#d97706', undefined, 'sel')}
+      {showNumbers &&
+        g.map((row, j) =>
+          row.map((v, i) => {
+            const [cx, cy] = top2d(i + 0.5, j + 0.5);
+            return (
+              <g key={`n${i}${j}`} pointerEvents="none">
+                <circle cx={cx} cy={cy} r={0.34} fill="#fff" stroke="#1b2838" strokeWidth={0.04} />
+                <text x={cx} y={cy + 0.15} textAnchor="middle" fontSize={0.44} fontWeight={900} fill="#1b2838">
+                  {v}
+                </text>
+              </g>
+            );
+          }),
+        )}
+      {DIR.map((dd) => {
+        const [dx, dy] = dd.at(n);
+        const [pu, pv] = dataPointToView(n, rot, dx, dy);
+        const [lx, ly] = top2d(pu, pv);
+        return (
+          <g key={dd.label} pointerEvents="none">
+            <rect x={lx - fs * 1.7} y={ly - fs * 0.75} width={fs * 3.4} height={fs * 1.4} rx={fs * 0.7} fill="#fff" opacity={0.92} stroke="#8aa1b6" strokeWidth={0.03} />
+            <text x={lx} y={ly + fs * 0.3} textAnchor="middle" fontSize={fs} fontWeight={800} fill="#33475b">
+              {dd.label}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }

@@ -39,13 +39,13 @@ function readStore<T>(page: Page, store: string): Promise<T[]> {
   );
 }
 
-async function readDraftPuzzle<T>(page: Page, gameId: string): Promise<T> {
+async function readDraftPuzzle<T>(page: Page, gameId: string, match: (p: T) => boolean = () => true): Promise<T> {
   let found: T | undefined;
   await expect
     .poll(async () => {
       const all = await readStore<{ gameId?: string; status: string; createdAt: string; activeDraft?: { round: { puzzle: T } } }>(page, 'sessions');
       found = all
-        .filter((x) => x.gameId === gameId && x.status === 'inProgress' && x.activeDraft)
+        .filter((x) => x.gameId === gameId && x.status === 'inProgress' && x.activeDraft && match(x.activeDraft.round.puzzle))
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
         .at(-1)?.activeDraft?.round.puzzle;
       return !!found;
@@ -193,6 +193,51 @@ for (const size of SIZES) {
         }
       await page.getByRole('button', { name: 'こたえあわせ' }).click();
       await expect(page.getByText('せいかい！')).toBeVisible();
+    });
+
+    test('29 ブロック：むずかしい・チャレンジで「うえから」。お手本と じぶんが いっしょに きりかわり、まわしても 形と 向きが あう', async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', (e) => errors.push(String(e)));
+      await page.goto('/');
+      await createProfile(page, 'うえ');
+      for (const level of ['むずかしい', 'チャレンジ']) {
+        await startGame(page, 'block-builder', level);
+        const map = page.getByTestId('block-map');
+        const cell = (x: number, y: number) => map.locator(`[data-x="${x}"][data-y="${y}"]`);
+        await cell(0, 0).click();
+        await page.getByRole('button', { name: '1だん ふやす' }).click();
+        const p = await readDraftPuzzle<BlockPuzzle>(page, 'block-builder', (q) => q.size === (level === 'むずかしい' ? 3 : 4));
+        const toggle = page.getByRole('button', { name: 'うえから みる（おてほんと じぶん）' });
+        await expect(toggle).toBeVisible();
+        await aboveDock(page, toggle, `topview toggle ${level}`);
+        await toggle.click();
+        await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByTestId('block-model')).toHaveAttribute('data-view', 'top');
+        await expect(page.getByTestId('block-own')).toHaveAttribute('data-view', 'top');
+        await noOverflow(page, `topview ${level}`);
+        // お手本の 上から 見た 図は どの マスも 高さ どおり（0 は 空きマス）
+        for (let y = 0; y < p.size; y++)
+          for (let x = 0; x < p.size; x++) {
+            const c = page.getByTestId('block-model').locator(`[data-testid="top-cell"][data-x="${x}"][data-y="${y}"]`);
+            await expect(c).toHaveAttribute('data-h', String(p.heights[y][x]));
+            await expect(c).toHaveAttribute('data-empty', p.heights[y][x] === 0 ? 'true' : 'false');
+          }
+        // 上から 見たまま まわす → 立体に もどしても 向きは そのまま
+        await page.getByRole('button', { name: 'みぎに まわす' }).click();
+        await expect(page.getByTestId('block-model')).toHaveAttribute('data-rot', '1');
+        await expect(page.getByTestId('block-own')).toHaveAttribute('data-rot', '1');
+        // 上から 見た じぶんの マスを タップして えらぶ
+        await page.getByTestId('block-own').locator('[data-testid="top-cell"][data-x="1"][data-y="1"]').click();
+        await expect(cell(1, 1)).toHaveAttribute('aria-selected', 'true');
+        await page.getByRole('button', { name: '1だん ふやす' }).click();
+        await expect(cell(1, 1)).toHaveText('1');
+        await toggle.click();
+        await expect(page.getByTestId('block-model')).toHaveAttribute('data-view', 'iso');
+        await expect(page.getByTestId('block-own')).toHaveAttribute('data-rot', '1');
+        await expect(cell(0, 0)).toHaveText('1');
+        await expect(cell(1, 1)).toHaveText('1');
+      }
+      expect(errors).toEqual([]);
     });
 
     test('30 魔法陣：チャレンジ 4×4 を パレットで うめる。とちゅうの 合計、リロードで つづきから', async ({ page }) => {

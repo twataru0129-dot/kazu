@@ -230,7 +230,7 @@ export const blockBuilder: GameLogic<BlockPuzzle, BlockAnswer> = {
     const pr = readProgress(p, progress);
     const wrong = wrongCells(p, pr.heights);
     const top = Math.max(...p.heights.flat());
-    const first = [`ひだり・みぎに まわすと、うしろに かくれた ブロックが みえるよ。いちばん たかい ところは ${top}だん`, '', ''] as [string, string, string];
+    const first = [`ひだり・みぎに まわしたり、うえから みたりして、ブロックの かたちを たしかめよう。いちばん たかい ところは ${top}だん`, '', ''] as [string, string, string];
     first[1] = wrong.length === 0 ? 'ぜんぶ あって いるよ。「こたえあわせ」を おしてみよう' : `ひかって いる ところの たかさが ちがうよ（${place(p.size, wrong[0])}）`;
     if (pr.sel) {
       const want = p.heights[pr.sel.y][pr.sel.x];
