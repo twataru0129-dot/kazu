@@ -1,6 +1,6 @@
 /**
  * アプリの 版の 文字（ビルドの ときに vite.config.ts から つかう）。
- * package.json の version と、ビルドごとの ID をつなぐ：1.6.0+a1b2c3d
+ * package.json の version と、ビルドごとの ID をつなぐ：1.6.1+a1b2c3d
  * ID は BUILD_ID → GitHub Actions の commit（GITHUB_SHA の 先頭7桁）→ ビルドした 時刻 の じゅんで きめる。
  */
 export function buildAppVersion(version: string, env: { BUILD_ID?: string; GITHUB_SHA?: string }, now: Date = new Date()): string {
