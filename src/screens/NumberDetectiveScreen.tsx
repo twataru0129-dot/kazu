@@ -24,6 +24,7 @@ import {
   resultText,
   typeDigit,
   type DetectiveState,
+  type EatBite,
   type GuessRecord,
 } from '../domain/games/numberDetective';
 import { GAME_BY_ID } from '../domain/games/registry';
@@ -188,7 +189,8 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   stateRef.current = state;
   const sessionRef = useRef<Session>(session);
   const finishedRef = useRef(false);
-  const [message, setMessage] = useState<{ text: string; kind: 'result' | 'warn' | 'good'; n: number } | null>(null);
+  // kind が result の ときは けっかの 数（eat・bite）も もつ（上の 欄で「ぴったり」「ばしょちがい」を べつの まとまりで 見せる）
+  const [message, setMessage] = useState<{ text: string; kind: 'result' | 'warn' | 'good'; n: number; result?: EatBite } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const { ref: roomRef, width: roomW } = useRoom<HTMLDivElement>();
 
@@ -287,7 +289,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
     const text = r.state.status === 'cleared' ? 'せいかい！' : resultText(r.result);
     if (r.state.status === 'cleared') play('complete');
     else play(r.result.eat + r.result.bite > 0 ? 'correct' : 'soft');
-    setMessage({ text, kind: r.state.status === 'cleared' ? 'good' : 'result', n: Date.now() });
+    setMessage({ text, kind: r.state.status === 'cleared' ? 'good' : 'result', n: Date.now(), result: r.result });
     speak(r.state.status === 'over' ? `おしかったね。こたえは ${r.state.secret.split('').join(' ')} だったよ` : text);
   };
 
@@ -318,6 +320,8 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   // しきいは 文字の 大きさ（rem）で きめる（「文字を 大きく」でも はみ出さない）
   const rem = typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) || 16 : 16;
   const cellRem = (roomW - 4) / 2 / rem;
+  // 上の けっか欄：せまい 画面（iPhone の 縦など）は「ぴったり」「ばしょちがい」を 2だん 固定、ひろい 画面は よこ ならび
+  const twoRowResult = roomW / rem < RESULT_ROW_REM;
   const density: Density = cellRem >= DENSITY_REM.wide ? 'wide' : cellRem >= DENSITY_REM.mid ? 'mid' : cellRem >= DENSITY_REM.tight ? 'tight' : 'two-line';
 
   const pad = (
@@ -437,7 +441,7 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
                 のこり <span style={{ fontSize: '1.3rem', color: left <= 3 && !finished ? '#c2410c' : '#1b2838' }}>{left}</span>かい
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <div
                 key={finished ? 'end' : (message?.n ?? 0)}
                 role="status"
@@ -446,7 +450,8 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
                 className={finished || (message && message.kind !== 'warn') ? 'pop' : undefined}
                 style={{
                   flex: 1,
-                  minWidth: 0,
+                  // けっかの 2つの まとまりより せまく しない（とても せまい ときは「？ あそびかた」が 下の 行へ）
+                  minWidth: 'min-content',
                   minHeight: 44,
                   display: 'flex',
                   alignItems: 'center',
@@ -485,6 +490,11 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
                       <span>こたえは {state.secret} だったよ！</span>
                     </>
                   )
+                ) : message?.kind === 'result' && message.result ? (
+                  <>
+                    <span className="sr-only">{message.text}</span>
+                    <LatestResult result={message.result} twoRows={twoRowResult} />
+                  </>
                 ) : (
                   (message?.text ?? '3つ えらんで しつもんしよう')
                 )}
@@ -512,12 +522,33 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   );
 }
 
+/** 上の けっか欄を よこ ならびに する はば（rem）。これより せまい ときは 2だん */
+const RESULT_ROW_REM = 30;
+
+/**
+ * いちばん あたらしい けっか（上の 欄）。「ぴったり 1」「ばしょちがい 0」を べつべつの まとまりに して、
+ * 数だけが つぎの 行に おちたり ことばが とちゅうで きれたり しない ように する（読みあげは そとの sr-only の 文）。
+ */
+function LatestResult({ result, twoRows }: { result: EatBite; twoRows: boolean }) {
+  return (
+    <span
+      aria-hidden
+      data-testid="detective-latest"
+      data-layout={twoRows ? 'rows' : 'row'}
+      style={{ display: 'grid', gridTemplateColumns: twoRows ? 'auto' : 'auto auto', justifyContent: 'center', gap: twoRows ? 2 : 8 }}
+    >
+      <Count kind="eat" n={result.eat} size="top" block />
+      <Count kind="bite" n={result.bite} size="top" block />
+    </span>
+  );
+}
+
 /** けっかの 数（「ぴったり 1」「ばしょちがい 2」。いろ と もじ の 両方で） */
-function Count({ kind, n, size = 'lg', block = false }: { kind: 'eat' | 'bite'; n: number; size?: 'lg' | 'md' | 'sm'; block?: boolean }) {
+function Count({ kind, n, size = 'lg', block = false }: { kind: 'eat' | 'bite'; n: number; size?: 'top' | 'lg' | 'md' | 'sm'; block?: boolean }) {
   const eat = kind === 'eat';
   const color = eat ? EAT_COLOR : BITE_COLOR;
-  const label = { lg: '0.85rem', md: '0.74rem', sm: '0.62rem' }[size];
-  const num = { lg: '1.25rem', md: '1rem', sm: '0.9rem' }[size];
+  const label = { top: '0.9rem', lg: '0.85rem', md: '0.74rem', sm: '0.62rem' }[size];
+  const num = { top: '1.15rem', lg: '1.25rem', md: '1rem', sm: '0.9rem' }[size];
   return (
     <span
       data-kind={kind}
@@ -525,14 +556,14 @@ function Count({ kind, n, size = 'lg', block = false }: { kind: 'eat' | 'bite'; 
         display: block ? 'flex' : 'inline-flex',
         alignItems: 'baseline',
         justifyContent: 'space-between',
-        gap: size === 'sm' ? 3 : 4,
-        padding: size === 'lg' ? '2px 10px' : size === 'md' ? '0 6px' : '0 2px',
+        gap: size === 'sm' ? 3 : size === 'top' ? 10 : 4,
+        padding: size === 'top' ? '1px 12px' : size === 'lg' ? '2px 10px' : size === 'md' ? '0 6px' : '0 2px',
         borderRadius: 999,
         background: n > 0 ? (eat ? '#dcfce7' : '#fef3c7') : '#f1f5f9',
         color: n > 0 ? color : '#64748b',
         fontWeight: 900,
         whiteSpace: 'nowrap',
-        lineHeight: size === 'lg' ? 1.25 : 1.06,
+        lineHeight: size === 'lg' ? 1.25 : size === 'top' ? 1.1 : 1.06,
       }}
     >
       <span style={{ fontSize: label }}>{RESULT_NAMES[kind]}</span>

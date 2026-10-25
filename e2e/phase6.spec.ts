@@ -70,7 +70,12 @@ for (const size of SIZES) {
       await createProfile(page, 'たんてい');
       await page.goto('/#/play');
       // 一覧に 31 が ある
-      await expect(page.getByRole('link', { name: /すうじたんてい/ }).or(page.getByRole('button', { name: /すうじたんてい/ })).first()).toBeVisible();
+      await expect(
+        page
+          .getByRole('link', { name: /すうじたんてい/ })
+          .or(page.getByRole('button', { name: /すうじたんてい/ }))
+          .first(),
+      ).toBeVisible();
       await page.goto('/#/play/number-detective');
       await expect(page.getByRole('button', { name: 'すぐに あそぶ' })).toBeVisible();
       await expect(page.getByRole('radiogroup', { name: 'むずかしさ' })).toHaveCount(0);
@@ -96,7 +101,9 @@ for (const size of SIZES) {
       const wrong = wrongFor(secret, 3);
       await tap(page, wrong[0]);
       const r0 = judgeGuess(secret, wrong[0]);
-      await expect(page.getByTestId('detective-message')).toHaveText(`ぴったり ${r0.eat}！ ばしょちがい ${r0.bite}！`);
+      await expect(page.getByTestId('detective-message').locator('.sr-only')).toHaveText(`ぴったり ${r0.eat}！ ばしょちがい ${r0.bite}！`);
+      await expect(page.getByTestId('detective-latest').locator('[data-kind="eat"]')).toHaveText(`ぴったり${r0.eat}`);
+      await expect(page.getByTestId('detective-latest').locator('[data-kind="bite"]')).toHaveText(`ばしょちがい${r0.bite}`);
       await expect(page.getByTestId('detective-row')).toHaveCount(1);
       await expect(page.getByTestId('detective-left')).toContainText('9');
       // まえと おなじ ならびは 回数を へらさない
@@ -180,7 +187,11 @@ for (const size of SIZES) {
       await expect(list).toBeVisible();
       await noOverflow(page, 'over');
       await expect
-        .poll(async () => (await readStore<{ gameId?: string; finalCorrect?: boolean; skipped?: boolean }>(page, 'attempts')).filter((a) => a.gameId === 'number-detective').map((a) => [a.finalCorrect, a.skipped ?? null]))
+        .poll(async () =>
+          (await readStore<{ gameId?: string; finalCorrect?: boolean; skipped?: boolean }>(page, 'attempts'))
+            .filter((a) => a.gameId === 'number-detective')
+            .map((a) => [a.finalCorrect, a.skipped ?? null]),
+        )
         .toEqual([[false, null]]);
       await page.getByRole('button', { name: 'もういちど あそぶ' }).click();
       await expect(page.getByTestId('detective-left')).toContainText('10');
