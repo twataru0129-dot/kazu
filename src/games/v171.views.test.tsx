@@ -148,8 +148,8 @@ describe('v1.7.1 すうじたんてい：履歴は 2れつ × 5だん（10かい
     expect(cells().map((c) => c.textContent)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
   });
 
-  for (const n of [1, 5, 6, 10])
-    it(`${n}かい しつもん：枠は 10この まま、${n}こ うまり、さいごだけ 強調。EAT・BITE は 文字で のこる`, async () => {
+  for (const n of [1, 5, 6, 9, 10])
+    it(`${n}かい しつもん：枠は 10この まま、${n}こ うまり、さいごだけ 強調。ぴったり・ばしょちがい は 文字で のこる`, async () => {
       const { secret } = await mountDetective();
       const gs = WRONG.filter((g) => g !== secret).slice(0, n);
       for (const g of gs) enter(g);
@@ -160,9 +160,10 @@ describe('v1.7.1 すうじたんてい：履歴は 2れつ × 5だん（10かい
       // 1〜5 は 枠の 1〜5ばんめ（左の れつ）、6〜10 は 6〜10ばんめ（右の れつ）
       gs.forEach((g, i) => {
         const r = judgeGuess(secret, g);
-        expect(cells()[i].getAttribute('aria-label')).toBe(`${i + 1}かいめ ${g.split('').join(' ')}：${r.eat} EAT ${r.bite} BITE`);
-        expect(cells()[i].textContent).toContain(`${r.eat}EAT`);
-        expect(cells()[i].textContent).toContain(`${r.bite}BITE`);
+        expect(cells()[i].getAttribute('aria-label')).toBe(`${i + 1}かいめ ${g.split('').join(' ')}：ぴったり ${r.eat}、ばしょちがい ${r.bite}`);
+        expect(cells()[i].querySelector('[data-kind="eat"]')!.textContent).toBe(`ぴったり${r.eat}`);
+        expect(cells()[i].querySelector('[data-kind="bite"]')!.textContent).toBe(`ばしょちがい${r.bite}`);
+        expect(cells()[i].textContent).not.toMatch(/EAT|BITE/);
         expect(cells()[i].textContent).toContain(g);
       });
       expect(rows.filter((r) => r.dataset.latest === 'true')).toEqual([rows[n - 1]]);

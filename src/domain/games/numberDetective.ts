@@ -3,7 +3,8 @@ import type { GameLogic } from './types';
 
 /**
  * 31 すうじたんてい：コンピューターが きめた 3つの ひみつの すうじ（0〜9・かさならない・ならびも だいじ）を、
- * 10かい までの しつもんで あてる。しつもんの こたえは EAT（すうじも ばしょも おなじ）と BITE（すうじだけ おなじ）の 数だけ。
+ * 10かい までの しつもんで あてる。しつもんの こたえは「ぴったり」（すうじも ばしょも あっている。内部では eat）と
+ * 「ばしょちがい」（すうじは あっているけど、ばしょが ちがう。内部では bite）の 数だけ。
  *
  * すうじは 3もじの 文字列で もつ（"052" を 52 に しない）。判定は UI から はなした 純粋関数。
  * ひみつの すうじは 1人ずつ「720とおりを シャッフルした じゅんばん」から 出す（使いきるまで 同じ ならびは 出ない）。
@@ -44,7 +45,16 @@ export function judgeGuess(secret: string, guess: string): EatBite {
   return { eat, bite };
 }
 
-export const resultText = (r: EatBite) => `${r.eat} EAT！ ${r.bite} BITE！`;
+/**
+ * こどもむけの よびかた（画面・読みあげ・あそびかたで ぜんぶ これを つかう）。
+ * 内部の データ・判定は これまで どおり eat・bite の まま（保存の 形も かえない）。
+ */
+export const RESULT_NAMES = { eat: 'ぴったり', bite: 'ばしょちがい' } as const;
+export const RESULT_MEANINGS = { eat: 'すうじも ばしょも あっている！', bite: 'すうじは あっているけど、ばしょが ちがう！' } as const;
+/** しつもんの けっか（画面の おしらせ・読みあげ）：「ぴったり 1！ ばしょちがい 2！」 */
+export const resultText = (r: EatBite) => `${RESULT_NAMES.eat} ${r.eat}！ ${RESULT_NAMES.bite} ${r.bite}！`;
+/** 読みあげ用の みじかい 形：「ぴったり 1、ばしょちがい 2」 */
+export const resultLabel = (r: EatBite) => `${RESULT_NAMES.eat} ${r.eat}、${RESULT_NAMES.bite} ${r.bite}`;
 
 export interface GuessRecord extends EatBite {
   guess: string;
@@ -180,7 +190,7 @@ export const numberDetective: GameLogic<DetectivePuzzle, DetectiveAnswer> = {
     const r = judgeGuess(p.secret, a.guess);
     return { correct: r.eat === CODE_LENGTH, message: resultText(r) };
   },
-  // このゲームでは EAT・BITE の 結果が ヒント。ヒントボタンは 出さない（あそびかたを いつでも 見られる）
-  hints: () => ['EAT は すうじも ばしょも おなじ', 'BITE は すうじだけ おなじで ばしょが ちがう', 'まえの けっかと くらべて つぎの すうじを かんがえよう'],
+  // このゲームでは しつもんの けっか（ぴったり・ばしょちがい）が ヒント。ヒントボタンは 出さない（あそびかたを いつでも 見られる）
+  hints: () => [`${RESULT_NAMES.eat}：${RESULT_MEANINGS.eat}`, `${RESULT_NAMES.bite}：${RESULT_MEANINGS.bite}`, 'まえの けっかと くらべて つぎの すうじを かんがえよう'],
   key: (p) => p.secret,
 };

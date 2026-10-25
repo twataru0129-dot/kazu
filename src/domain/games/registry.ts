@@ -252,7 +252,7 @@ export const GAMES: GameMeta[] = [
   {
     // むずかしさは 1つだけ（専用の 画面で あそぶ。むずかしさの 選択・ヒントボタンは 出さない）
     id: 'number-detective', no: '31', title: 'すうじたんてい', category: 'compare', kind: 'board', resumable: true, input: 'すうじボタン',
-    description: 'ひみつの 3つの すうじを、10かい までの しつもんで あてよう。EAT と BITE が てがかり だよ。',
+    description: 'ひみつの 3つの すうじを、10かい までの しつもんで あてよう。「ぴったり」と「ばしょちがい」が てがかり だよ。',
     difficultyNotes: { easy: '3つの すうじ・10かい', normal: '3つの すうじ・10かい', hard: '3つの すうじ・10かい', challenge: '3つの すうじ・10かい' },
     logic: numberDetective,
   },
