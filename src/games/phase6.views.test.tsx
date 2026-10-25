@@ -106,7 +106,15 @@ describe('31 すうじたんてい（画面）：あそぶ', () => {
     const r = judgeGuess(secret, g);
     expect(rows()).toHaveLength(1);
     expect(rows()[0].getAttribute('aria-label')).toBe(`1かいめ ${g.split('').join(' ')}：ぴったり ${r.eat}、ばしょちがい ${r.bite}`);
-    expect(screen.getByTestId('detective-message').textContent).toBe(`ぴったり ${r.eat}！ ばしょちがい ${r.bite}！`);
+    // 上の 欄は「ぴったり ○」「ばしょちがい ○」の 2つの まとまり。読みあげ用には 1つの 文
+    const msg = screen.getByTestId('detective-message');
+    expect(msg.querySelector('.sr-only')?.textContent).toBe(`ぴったり ${r.eat}！ ばしょちがい ${r.bite}！`);
+    const latest = screen.getByTestId('detective-latest');
+    expect(latest.getAttribute('aria-hidden')).toBe('true');
+    expect([...latest.querySelectorAll('[data-kind]')].map((e) => [e.getAttribute('data-kind'), e.textContent])).toEqual([
+      ['eat', `ぴったり${r.eat}`],
+      ['bite', `ばしょちがい${r.bite}`],
+    ]);
     expect(left()).toContain('9');
     // 入力は からに なる
     expect(screen.getByTestId('detective-slot-0').textContent).toBe('');

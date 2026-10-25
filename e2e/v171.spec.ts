@@ -46,6 +46,62 @@ async function draftOf<T>(page: Page, gameId: string, pick: (d: { round?: { puzz
 async function noOverflow(page: Page, where: string) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), `${where} overflow`).toBeLessThanOrEqual(0);
 }
+/**
+ * v1.7.2：上の けっか欄。「ぴったり ○」「ばしょちがい ○」が べつべつの まとまりで、どちらも 1行に おさまり（数だけ 次の 行に おちない）、
+ * iPhone の 縦画面では 2だん（ぴったりが 上）。欄は「？ あそびかた」「のこり」と かさならない
+ */
+async function latestResultOk(page: Page, rows: boolean | null, where: string) {
+  const latest = page.getByTestId('detective-latest');
+  await expect(latest).toBeVisible();
+  // あらわれる ときの 動き（pop）が おわってから はかる
+  await page.getByTestId('detective-message').evaluate((e) => Promise.all(e.getAnimations().map((a) => a.finished)));
+  const info = await latest.evaluate((root) => {
+    const rect = (e: Element) => e.getBoundingClientRect();
+    const pills = [...root.querySelectorAll('[data-kind]')].map((p) => {
+      const [label, num] = [...p.children].map(rect);
+      const r = rect(p);
+      return {
+        kind: p.getAttribute('data-kind'),
+        text: p.textContent,
+        lines: (p as HTMLElement).getClientRects().length,
+        clipped: p.scrollWidth > p.clientWidth + 1,
+        // ことばと 数が 同じ 行（数の 上下が ことばの 行の 中）で、数が ことばの みぎ
+        sameLine: num.top < label.bottom && num.bottom > label.top && num.left >= label.right - 1,
+        labelOneLine: label.height < parseFloat(getComputedStyle(p.children[0]).fontSize) * 1.9,
+        r: { top: r.top, bottom: r.bottom, left: r.left, right: r.right },
+      };
+    });
+    const box = rect(root.closest('[data-testid="detective-message"]')!);
+    const help = [...document.querySelectorAll('button')].find((b) => b.textContent?.includes('あそびかた'))!;
+    const left = document.querySelector('[data-testid="detective-left"]')!;
+    return { layout: root.getAttribute('data-layout'), pills, box: { top: box.top, bottom: box.bottom, left: box.left, right: box.right }, help: rect(help).toJSON(), left: rect(left).toJSON() };
+  });
+  expect(
+    info.pills.map((p) => p.kind),
+    where,
+  ).toEqual(['eat', 'bite']);
+  expect(info.pills[0].text).toMatch(/^ぴったり\d$/);
+  expect(info.pills[1].text).toMatch(/^ばしょちがい\d$/);
+  for (const p of info.pills) {
+    expect([p.lines, p.clipped, p.sameLine, p.labelOneLine], `${where} ${p.kind}`).toEqual([1, false, true, true]);
+    // 欄の 中に おさまる
+    expect(p.r.left).toBeGreaterThanOrEqual(info.box.left - 1);
+    expect(p.r.right).toBeLessThanOrEqual(info.box.right + 1);
+    expect(p.r.top).toBeGreaterThanOrEqual(info.box.top - 1);
+    expect(p.r.bottom).toBeLessThanOrEqual(info.box.bottom + 1);
+  }
+  const [a, b] = info.pills;
+  if (rows !== null) expect(info.layout, where).toBe(rows ? 'rows' : 'row');
+  if (info.layout === 'rows') expect(a.r.bottom).toBeLessThanOrEqual(b.r.top + 0.5);
+  else expect(a.r.right).toBeLessThanOrEqual(b.r.left + 0.5);
+  const apart = (x: { top: number; bottom: number; left: number; right: number }, y: { top: number; bottom: number; left: number; right: number }) =>
+    x.right <= y.left + 0.5 || y.right <= x.left + 0.5 || x.bottom <= y.top + 0.5 || y.bottom <= x.top + 0.5;
+  expect(apart(info.box, info.help), `${where} help`).toBe(true);
+  expect(apart(info.box, info.left), `${where} left`).toBe(true);
+  // 上の カードが 不自然に 高く ならない（2だんでも 70px まで）
+  expect(info.box.bottom - info.box.top, `${where} height`).toBeLessThanOrEqual(70);
+}
+
 const style = (page: Page, sel: string) =>
   page
     .locator(sel)
@@ -182,9 +238,13 @@ for (const size of SIZES) {
       await expect(firstRow.locator('[data-kind="eat"]')).toContainText('ぴったり');
       await expect(firstRow.locator('[data-kind="bite"]')).toContainText('ばしょちがい');
       // 画面・読みあげに 英語・カタカナの よびかたが のこって いない
-      const words = await page.locator('main').evaluate((root) => [(root as HTMLElement).innerText, ...[...root.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label') ?? '')].join('\n'));
+      const words = await page
+        .locator('main')
+        .evaluate((root) => [(root as HTMLElement).innerText, ...[...root.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label') ?? '')].join('\n'));
       expect(words).not.toMatch(/EAT|BITE|イート|バイト/);
       await expect(page.getByTestId('detective-row').last()).toHaveAttribute('data-latest', 'true');
+      // 上の けっか欄（iPhone の 縦画面 〜 430 は 2だん 固定）
+      await latestResultOk(page, size.width <= 430 ? true : null, 'normal');
       if (fits) {
         // スクロール せずに：ひみつ・のこり・10この 枠・入力欄・すうじボタン・しつもん／けす ボタン
         expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
@@ -271,6 +331,7 @@ for (const size of SIZES) {
       }
       await expect(page.getByTestId('detective-row')).toHaveCount(9);
       await noOverflow(page, 'detective large');
+      await latestResultOk(page, size.width <= 430 ? true : null, 'large');
       const cells = page.getByTestId('detective-history').locator('li');
       expect(await cells.evaluateAll((els) => els.filter((e) => e.scrollWidth > e.clientWidth + 1).length)).toBe(0);
       if (size.width >= 375) expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
