@@ -176,11 +176,14 @@ for (const size of SIZES) {
         expect(Math.abs(boxes[i + 5].y - boxes[i].y)).toBeLessThanOrEqual(1);
         if (i > 0) expect(boxes[i].y).toBeGreaterThanOrEqual(boxes[i - 1].b - 1); // かさならない
       }
-      // 文字が はみ出して かくれない（EAT・BITE を はぶかない）
+      // 文字が はみ出して かくれない（ぴったり・ばしょちがい を はぶかない）
       expect(await cells.evaluateAll((els) => els.filter((e) => e.scrollWidth > e.clientWidth + 1).length)).toBe(0);
       const firstRow = page.getByTestId('detective-row').first();
-      await expect(firstRow).toContainText('EAT');
-      await expect(firstRow).toContainText('BITE');
+      await expect(firstRow.locator('[data-kind="eat"]')).toContainText('ぴったり');
+      await expect(firstRow.locator('[data-kind="bite"]')).toContainText('ばしょちがい');
+      // 画面・読みあげに 英語・カタカナの よびかたが のこって いない
+      const words = await page.locator('main').evaluate((root) => [(root as HTMLElement).innerText, ...[...root.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label') ?? '')].join('\n'));
+      expect(words).not.toMatch(/EAT|BITE|イート|バイト/);
       await expect(page.getByTestId('detective-row').last()).toHaveAttribute('data-latest', 'true');
       if (fits) {
         // スクロール せずに：ひみつ・のこり・10この 枠・入力欄・すうじボタン・しつもん／けす ボタン

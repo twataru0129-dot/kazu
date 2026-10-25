@@ -73,9 +73,10 @@ describe('31 すうじたんてい（画面）：はじめる まえ', () => {
     await mount();
     fireEvent.click(screen.getByRole('button', { name: 'あそびかたを みる' }));
     const howto = screen.getByTestId('detective-howto');
-    expect(howto.textContent).toContain('EAT（イート）は すうじも ばしょも おなじ');
-    expect(howto.textContent).toContain('BITE（バイト）は すうじだけ おなじ');
-    expect(howto.textContent).toContain('10かい いないに 3 EAT を めざそう');
+    expect(howto.textContent).toContain('「ぴったり」は すうじも ばしょも あっている！');
+    expect(howto.textContent).toContain('「ばしょちがい」は すうじは あっているけど、ばしょが ちがう！');
+    expect(howto.textContent).toContain('10かい いないに 3つとも ぴったりを めざそう！');
+    expect(howto.textContent).not.toMatch(/EAT|BITE|イート|バイト/);
     fireEvent.click(screen.getAllByRole('button', { name: 'もどる' }).at(-1)!);
     await screen.findByRole('button', { name: 'すぐに あそぶ' });
     fireEvent.click(screen.getByRole('button', { name: 'あそびかたを みる' }));
@@ -104,8 +105,8 @@ describe('31 すうじたんてい（画面）：あそぶ', () => {
     enter(g);
     const r = judgeGuess(secret, g);
     expect(rows()).toHaveLength(1);
-    expect(rows()[0].getAttribute('aria-label')).toBe(`1かいめ ${g.split('').join(' ')}：${r.eat} EAT ${r.bite} BITE`);
-    expect(screen.getByTestId('detective-message').textContent).toBe(`${r.eat} EAT！ ${r.bite} BITE！`);
+    expect(rows()[0].getAttribute('aria-label')).toBe(`1かいめ ${g.split('').join(' ')}：ぴったり ${r.eat}、ばしょちがい ${r.bite}`);
+    expect(screen.getByTestId('detective-message').textContent).toBe(`ぴったり ${r.eat}！ ばしょちがい ${r.bite}！`);
     expect(left()).toContain('9');
     // 入力は からに なる
     expect(screen.getByTestId('detective-slot-0').textContent).toBe('');

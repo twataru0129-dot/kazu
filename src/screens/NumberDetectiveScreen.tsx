@@ -18,6 +18,9 @@ import {
   numberDetective,
   questionsLeft,
   restoreState,
+  RESULT_MEANINGS,
+  RESULT_NAMES,
+  resultLabel,
   resultText,
   typeDigit,
   type DetectiveState,
@@ -47,6 +50,7 @@ export interface DetectiveSummary {
   secret: string;
 }
 
+/** ぴったり：みどり、ばしょちがい：オレンジ（いろだけで なく 文字でも わかる） */
 const EAT_COLOR = '#15803d';
 const BITE_COLOR = '#b45309';
 
@@ -310,11 +314,11 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   const finished = state.status !== 'playing';
   const left = questionsLeft(state);
   const canAsk = !finished && state.input.length === CODE_LENGTH;
-  // 履歴の 1マスの はばで 見せかたを かえる：ひろい→1行、すこし せまい→1行（つめる）、とても せまい→EAT・BITE を 2行めへ（文字は はぶかない）
+  // 履歴の 1マスの はばで 見せかたを かえる：ひろい・すこし せまい→すうじの よこに けっかを 2だんで、とても せまい→けっかを すうじの したへ（文字は はぶかない）
   // しきいは 文字の 大きさ（rem）で きめる（「文字を 大きく」でも はみ出さない）
   const rem = typeof window !== 'undefined' ? parseFloat(getComputedStyle(document.documentElement).fontSize) || 16 : 16;
   const cellRem = (roomW - 4) / 2 / rem;
-  const density: Density = cellRem >= 12.6 ? 'wide' : cellRem >= 8.7 ? 'tight' : 'two-line';
+  const density: Density = cellRem >= DENSITY_REM.wide ? 'wide' : cellRem >= DENSITY_REM.mid ? 'mid' : cellRem >= DENSITY_REM.tight ? 'tight' : 'two-line';
 
   const pad = (
     <div className="stack" style={{ gap: 6 }} data-testid="detective-pad">
@@ -508,39 +512,50 @@ function DetectivePlay({ session, draft, onAgain, onQuit }: { session: Session; 
   );
 }
 
-/** EAT・BITE の 数（いろ と もじ の 両方で） */
-function Count({ kind, n, small = false, tight = false }: { kind: 'eat' | 'bite'; n: number; small?: boolean; tight?: boolean }) {
+/** けっかの 数（「ぴったり 1」「ばしょちがい 2」。いろ と もじ の 両方で） */
+function Count({ kind, n, size = 'lg', block = false }: { kind: 'eat' | 'bite'; n: number; size?: 'lg' | 'md' | 'sm'; block?: boolean }) {
   const eat = kind === 'eat';
   const color = eat ? EAT_COLOR : BITE_COLOR;
+  const label = { lg: '0.85rem', md: '0.74rem', sm: '0.62rem' }[size];
+  const num = { lg: '1.25rem', md: '1rem', sm: '0.9rem' }[size];
   return (
     <span
+      data-kind={kind}
       style={{
-        display: 'inline-flex',
+        display: block ? 'flex' : 'inline-flex',
         alignItems: 'baseline',
-        gap: small ? 2 : 3,
-        padding: tight ? '1px 2px' : small ? '1px 6px' : '2px 8px',
+        justifyContent: 'space-between',
+        gap: size === 'sm' ? 3 : 4,
+        padding: size === 'lg' ? '2px 10px' : size === 'md' ? '0 6px' : '0 2px',
         borderRadius: 999,
         background: n > 0 ? (eat ? '#dcfce7' : '#fef3c7') : '#f1f5f9',
         color: n > 0 ? color : '#64748b',
         fontWeight: 900,
         whiteSpace: 'nowrap',
+        lineHeight: size === 'lg' ? 1.25 : 1.06,
       }}
     >
-      <span style={{ fontSize: small ? '1.05rem' : '1.25rem' }}>{n}</span>
-      <span style={{ fontSize: tight ? '0.62rem' : small ? '0.7rem' : '0.8rem' }}>{eat ? 'EAT' : 'BITE'}</span>
+      <span style={{ fontSize: label }}>{RESULT_NAMES[kind]}</span>
+      <span style={{ fontSize: num }}>{n}</span>
     </span>
   );
 }
 
+/** 履歴の 見せかたを かえる 1マスの はば（rem）。実測で きめた（数字・けっかが きれない） */
+const DENSITY_REM = { wide: 11.8, mid: 10.6, tight: 8.4 } as const;
+
 /**
  * 質問の 履歴。10かいぶんの 枠を いつも 2れつ × 5だん（ひだり 1〜5かいめ・みぎ 6〜10かいめ）に ならべ、
  * スクロール なしで ぜんぶ くらべられる ように する。まだの 枠は うすく 番号だけ（ふえても 位置が ずれない）。
+ * 1マスは「番号・3つの すうじ」の よこに「ぴったり」「ばしょちがい」を 2だんで ならべる（せまい ときは すうじの したへ）。
  */
-type Density = 'wide' | 'tight' | 'two-line';
+type Density = 'wide' | 'mid' | 'tight' | 'two-line';
 
 function History({ guesses, density }: { guesses: GuessRecord[]; density: Density }) {
   const twoLine = density === 'two-line';
   const tight = density === 'tight';
+  const mid = density === 'mid';
+  const cellMin = twoLine ? 66 : 40;
   return (
     <ol
       aria-label="しつもんの きろく"
@@ -560,7 +575,7 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
       {Array.from({ length: MAX_QUESTIONS }, (_, i) => {
         const g = guesses[i];
         const no = (
-          <span className="small muted" style={{ fontWeight: 800, fontSize: tight ? '0.68rem' : '0.75rem', minWidth: tight ? '0.8em' : '1.2em', textAlign: 'right' }} aria-hidden>
+          <span className="small muted" style={{ fontWeight: 800, fontSize: tight ? '0.66rem' : '0.75rem', minWidth: tight || mid ? '0.9em' : '1.2em', textAlign: 'right' }} aria-hidden>
             {i + 1}
           </span>
         );
@@ -570,24 +585,21 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
               key={`e${i}`}
               data-testid="detective-empty"
               aria-hidden
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: twoLine ? '4px 8px' : '4px 8px',
-                minHeight: twoLine ? 58 : 38,
-                borderRadius: 10,
-                border: '1.5px dashed #e2e8f0',
-                opacity: 0.7,
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', minHeight: cellMin, borderRadius: 10, border: '1.5px dashed #e2e8f0', opacity: 0.7 }}
             >
               {no}
             </li>
           );
         const latest = i === guesses.length - 1;
         const digits = (
-          <span style={{ fontSize: tight ? '0.98rem' : '1.2rem', fontWeight: 900, letterSpacing: tight ? 0 : '0.12em' }} aria-hidden>
+          <span style={{ fontSize: tight ? '1rem' : mid ? '1.08rem' : '1.2rem', fontWeight: 900, letterSpacing: tight || mid ? 0 : '0.1em' }} aria-hidden>
             {g.guess}
+          </span>
+        );
+        const results = (
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 1, marginLeft: twoLine ? 0 : 'auto', minWidth: 0 }} aria-hidden>
+            <Count kind="eat" n={g.eat} size={tight ? 'sm' : 'md'} block />
+            <Count kind="bite" n={g.bite} size={tight ? 'sm' : 'md'} block />
           </span>
         );
         return (
@@ -595,17 +607,17 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
             key={g.guess}
             data-testid="detective-row"
             data-latest={latest ? 'true' : undefined}
-            aria-label={`${i + 1}かいめ ${g.guess.split('').join(' ')}：${g.eat} EAT ${g.bite} BITE`}
+            aria-label={`${i + 1}かいめ ${g.guess.split('').join(' ')}：${resultLabel(g)}`}
             style={{
               display: 'flex',
               flexDirection: twoLine ? 'column' : 'row',
-              // 1行で 入りきらない ときは EAT・BITE を つぎの 行へ（文字を きらない）
+              // 入りきらない ときは けっかを つぎの 行へ（文字を きらない）
               flexWrap: twoLine ? 'nowrap' : 'wrap',
               alignItems: twoLine ? 'stretch' : 'center',
-              gap: twoLine ? 2 : tight ? 2 : 5,
+              gap: tight ? 2 : mid ? 3 : 5,
               rowGap: 2,
-              padding: tight ? '4px 3px' : '4px 6px',
-              minHeight: twoLine ? 58 : 38,
+              padding: tight ? '1px 3px' : mid ? '1px 4px' : '2px 6px',
+              minHeight: cellMin,
               borderRadius: 10,
               background: latest ? '#f5f3ff' : '#fff',
               border: latest ? '2px solid #7c3aed' : '1px solid #e2e8f0',
@@ -617,19 +629,13 @@ function History({ guesses, density }: { guesses: GuessRecord[]; density: Densit
                   {no}
                   {digits}
                 </span>
-                <span style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                  <Count kind="eat" n={g.eat} small />
-                  <Count kind="bite" n={g.bite} small />
-                </span>
+                {results}
               </>
             ) : (
               <>
                 {no}
                 {digits}
-                <span style={{ marginLeft: 'auto', display: 'flex', gap: tight ? 2 : 3 }}>
-                  <Count kind="eat" n={g.eat} small tight={tight} />
-                  <Count kind="bite" n={g.bite} small tight={tight} />
-                </span>
+                {results}
               </>
             )}
           </li>
@@ -687,19 +693,19 @@ function HowToPlay({ compact = false }: { compact?: boolean }) {
           {tile('7')}
         </p>,
       )}
-      {step(2, 'EAT（イート）は すうじも ばしょも おなじ', ex('123', [undefined, 'eat', undefined], 1, 0, '2 が おなじ ばしょ'))}
-      {step(3, 'BITE（バイト）は すうじだけ おなじ', ex('740', ['bite', 'bite', undefined], 0, 2, '7 と 4 は あるけど ばしょが ちがう'))}
+      {step(2, `「${RESULT_NAMES.eat}」は ${RESULT_MEANINGS.eat}`, ex('123', [undefined, 'eat', undefined], 1, 0, '2 が おなじ ばしょ'))}
+      {step(3, `「${RESULT_NAMES.bite}」は ${RESULT_MEANINGS.bite}`, ex('740', ['bite', 'bite', undefined], 0, 2, '7 と 4 は あるけど ばしょが ちがう'))}
       {step(
         4,
         'けっかを みて つぎの すうじを かんがえよう',
         <>
           {ex('472', ['eat', 'bite', 'bite'], 1, 2, '3つとも ある！ ならびかえて みよう')}
           <p className="small muted" style={{ margin: 0 }}>
-            ほんとうの ゲームでは、どの すうじが EAT か BITE かは おしえないよ。かずだけ わかるよ。
+            ほんとうの ゲームでは、どの すうじが {RESULT_NAMES.eat}か {RESULT_NAMES.bite}かは おしえないよ。かずだけ わかるよ。
           </p>
         </>,
       )}
-      {step(5, `${MAX_QUESTIONS}かい いないに 3 EAT を めざそう`, ex('427', ['eat', 'eat', 'eat'], 3, 0, 'せいかい！'))}
+      {step(5, `${MAX_QUESTIONS}かい いないに 3つとも ${RESULT_NAMES.eat}を めざそう！`, ex('427', ['eat', 'eat', 'eat'], 3, 0, 'せいかい！'))}
     </div>
   );
 }

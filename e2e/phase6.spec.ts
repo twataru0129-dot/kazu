@@ -79,7 +79,8 @@ for (const size of SIZES) {
 
       // あそびかた（えらんだ 人だけ）→ ゲームを はじめる
       await page.getByRole('button', { name: 'あそびかたを みる' }).click();
-      await expect(page.getByTestId('detective-howto')).toContainText('EAT（イート）は すうじも ばしょも おなじ');
+      await expect(page.getByTestId('detective-howto')).toContainText('「ぴったり」は すうじも ばしょも あっている！');
+      await expect(page.getByTestId('detective-howto')).toContainText('「ばしょちがい」は すうじは あっているけど、ばしょが ちがう！');
       await noOverflow(page, 'howto');
       await page.getByRole('button', { name: 'ゲームを はじめる' }).click();
       const pad = page.getByRole('group', { name: 'すうじボタン' });
@@ -95,7 +96,7 @@ for (const size of SIZES) {
       const wrong = wrongFor(secret, 3);
       await tap(page, wrong[0]);
       const r0 = judgeGuess(secret, wrong[0]);
-      await expect(page.getByTestId('detective-message')).toHaveText(`${r0.eat} EAT！ ${r0.bite} BITE！`);
+      await expect(page.getByTestId('detective-message')).toHaveText(`ぴったり ${r0.eat}！ ばしょちがい ${r0.bite}！`);
       await expect(page.getByTestId('detective-row')).toHaveCount(1);
       await expect(page.getByTestId('detective-left')).toContainText('9');
       // まえと おなじ ならびは 回数を へらさない

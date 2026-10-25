@@ -19,6 +19,8 @@ import {
   numberDetective,
   questionsLeft,
   restoreState,
+  RESULT_NAMES,
+  resultLabel,
   resultText,
   typeDigit,
   type DetectiveDeck,
@@ -96,7 +98,12 @@ describe('31 すうじたんてい：EAT・BITE の 判定', () => {
     }
   });
   it('けっかの ことば', () => {
-    expect(resultText({ eat: 1, bite: 2 })).toBe('1 EAT！ 2 BITE！');
+    expect(resultText({ eat: 1, bite: 2 })).toBe('ぴったり 1！ ばしょちがい 2！');
+    expect(resultLabel({ eat: 0, bite: 3 })).toBe('ぴったり 0、ばしょちがい 3');
+    expect(RESULT_NAMES).toEqual({ eat: 'ぴったり', bite: 'ばしょちがい' });
+    // こどもむけの ことばに 英語・カタカナの よびかたを のこさない
+    for (const t of [resultText({ eat: 3, bite: 0 }), resultLabel({ eat: 1, bite: 2 }), ...numberDetective.hints({ secret: '427' }), GAME_BY_ID['number-detective'].description])
+      expect(t).not.toMatch(/EAT|BITE|イート|バイト/i);
   });
 });
 
@@ -238,7 +245,7 @@ describe('31 すうじたんてい：登録', () => {
         expect(isValidCode(r.puzzle.secret)).toBe(true);
       }
     expect(numberDetective.judge({ secret: '427' }, { guess: '427' })).toMatchObject({ correct: true });
-    expect(numberDetective.judge({ secret: '427' }, { guess: '472' })).toMatchObject({ correct: false, message: '1 EAT！ 2 BITE！' });
+    expect(numberDetective.judge({ secret: '427' }, { guess: '472' })).toMatchObject({ correct: false, message: 'ぴったり 1！ ばしょちがい 2！' });
     expect(numberDetective.judge({ secret: '427' }, { guess: '447' }).correct).toBe(false);
   });
 });
