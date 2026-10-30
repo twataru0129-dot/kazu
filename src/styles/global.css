@@ -998,6 +998,39 @@ html[data-motion='reduced'] *::after {
   }
 }
 
+/* 時間制限の 方式（毎日自動回復・PINで解除）：ラジオの 丸つきで、えらんだ ものが ひとめで わかる */
+.limit-modes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 560px) {
+  .limit-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.limit-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  border-radius: 14px;
+  text-align: left;
+}
+.limit-mode-dot {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background: #fff;
+}
+.limit-mode[aria-pressed='true'] .limit-mode-dot {
+  box-shadow: inset 0 0 0 4px #fff;
+  background: var(--accent);
+  border-color: #fff;
+}
+
 /* ---- ホームの 版の 表示（右下・うすい 灰色。ふつうの フッター） ---- */
 .app-version {
   align-self: flex-end;

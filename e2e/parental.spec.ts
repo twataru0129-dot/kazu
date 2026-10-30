@@ -199,7 +199,7 @@ test('30分：待機→遊ぶ→閉じて再開で残り約20分→5分前の案
 
   // 解除直後は 数えない（親が持っているだけでは へらない）
   await playFor(page, 10 * MIN);
-  expect(await remainingText(page)).toContain('1回 30分（次に遊び始めたときから');
+  expect(await remainingText(page)).toContain('1回 30分・PINで解除（次に遊び始めたときから');
 
   // 記録・途中の盤面は 残っている
   expect(await readStore(page)).toEqual(before);
