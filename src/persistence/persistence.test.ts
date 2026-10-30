@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { indexedDbBackend, memoryBackend, openIndexedDb } from './db';
 import { Repo } from './repo';
 import { applyImport, exportBundle, previewImport } from './backup';
-import type { StoredAttempt } from './types';
+import type { ParentalConfig, StoredAttempt } from './types';
 
 let dbName = '';
 beforeEach(() => {
@@ -238,7 +238,7 @@ describe('保護者の設定（アプリ全体）', () => {
     const repo = await openRepo();
     expect((await repo.getParental()).enabled).toBe(false);
     const a = await repo.createProfile('A', 'cat');
-    await repo.saveParental({ enabled: true, limitMinutes: 30, pin: { algo: 'PBKDF2-SHA256', iterations: 1, salt: 'c2FsdA==', hash: 'aGFzaA==' }, failures: 0, retryAt: 0 });
+    await repo.saveParental({ enabled: true, limitMinutes: 30, mode: 'pin', pin: { algo: 'PBKDF2-SHA256', iterations: 1, salt: 'c2FsdA==', hash: 'aGFzaA==' }, failures: 0, retryAt: 0 });
     await repo.updatePlaytime(() => ({ state: { usedMs: 30 * 60_000, phase: 'locked', warned: true }, result: null }));
     const bundle = await exportBundle(repo);
     expect(JSON.stringify(bundle)).not.toMatch(/PBKDF2|playtime|parental|locked/);
@@ -249,5 +249,29 @@ describe('保護者の設定（アプリ全体）', () => {
     // 復元・削除をしても ロックは解除されない
     expect((await repo.getParental()).enabled).toBe(true);
     expect((await repo.getPlaytime()).phase).toBe('locked');
+  });
+
+  it('v1.8：前の 版の 保護者の 設定（方式なし）は 従来の PIN 方式で 読む。PIN・制限・ロックは そのまま', async () => {
+    const repo = await openRepo();
+    const pin = { algo: 'PBKDF2-SHA256' as const, iterations: 1, salt: 'c2FsdA==', hash: 'aGFzaA==' };
+    // v1.7 までの 形（mode が ない）
+    await repo.saveParental({ enabled: true, limitMinutes: 15, pin, failures: 2, retryAt: 0 } as unknown as ParentalConfig);
+    await repo.updatePlaytime(() => ({ state: { usedMs: 15 * 60_000, phase: 'locked', warned: true }, result: null }));
+    const c = await repo.getParental();
+    expect(c).toEqual({ enabled: true, limitMinutes: 15, mode: 'pin', pin, failures: 2, retryAt: 0 });
+    expect(await repo.getPlaytime()).toEqual({ usedMs: 15 * 60_000, phase: 'locked', warned: true });
+    // おかしい 方式も 従来の PIN 方式に（勝手に 自動回復に しない）
+    await repo.saveParental({ ...c, mode: 'weekly' } as unknown as ParentalConfig);
+    expect((await repo.getParental()).mode).toBe('pin');
+    // 新しい 方式・日付は 保存して 読める
+    await repo.saveParental({ ...c, mode: 'daily' });
+    await repo.updatePlaytime(() => ({ state: { usedMs: 60_000, phase: 'running', warned: false, day: '2026-10-30' }, result: null }));
+    expect((await repo.getParental()).mode).toBe('daily');
+    expect(await repo.getPlaytime()).toEqual({ usedMs: 60_000, phase: 'running', warned: false, day: '2026-10-30' });
+    // こわれた 日付は すてる（安全側：その日の 枠として あとで つけなおす）
+    await repo.updatePlaytime(() => ({ state: { usedMs: 60_000, phase: 'running', warned: false, day: '2026/10/30' }, result: null }));
+    expect((await repo.getPlaytime()).day).toBeUndefined();
+    // バックアップには 保護者の 設定・時間を ふくめない
+    expect(JSON.stringify(await exportBundle(repo))).not.toMatch(/PBKDF2|playtime|parental|daily|"day"/);
   });
 });

@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
 import { useParental } from '../../app/ParentalContext';
+import { modeOf } from '../../domain/parental/playtime';
 import { speak } from '../../audio/speech';
 import { PinEntry } from './PinEntry';
 
 /**
  * 時間切れの画面。App 全体をこの画面に差し替えるので、うしろのゲームや設定には さわれない。
  * 保護者が PIN を入れると解除され、時間枠が設定値に戻る（つぎに遊びはじめるまで数えない）。
+ * 毎日自動回復では、0時を すぎると 自動で とける（ParentalContext が 日付を みて いる）。PIN は その日の 追加の 許可。
  */
 export function LockScreen() {
   const parental = useParental();
+  const daily = modeOf(parental.config) === 'daily';
   useEffect(() => {
     speak('おしまいの じかんだよ！ おとうさん、おかあさんに かえしてね');
     // 開いていたダイアログなどのフォーカスを外す
@@ -31,11 +34,21 @@ export function LockScreen() {
         <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
           <span className="phrase">おとうさん、おかあさんに</span> <span className="phrase">かえしてね 😊</span>
         </p>
+        {daily && (
+          <p style={{ margin: 0, fontWeight: 700 }} data-testid="lock-daily">
+            <span className="phrase">あしたに なったら</span> <span className="phrase">また あそべるよ 🌙</span>
+          </p>
+        )}
       </div>
       <div className="card stack">
         <p className="center-text" style={{ margin: 0, fontWeight: 700 }}>
           おとなの ひとが あんしょうばんごうを いれてね
         </p>
+        {daily && (
+          <p className="center-text small" style={{ margin: 0 }}>
+            （保護者の方へ）暗証番号を入れると、今日だけ {parental.config.limitMinutes}分 追加で遊べます。
+          </p>
+        )}
         <PinEntry onSubmit={parental.unlockWithPin} submitLabel="かいじょ" />
       </div>
     </main>

@@ -4,7 +4,14 @@ import { useParental } from '../../app/ParentalContext';
 import { NumberPad } from '../../components/NumberPad';
 import { Confirm } from '../../components/ui';
 import { isValidPin, isWeakPin, PIN_LENGTH } from '../../domain/parental/pin';
-import { DEFAULT_LIMIT_MINUTES, formatMinutes, LIMIT_OPTIONS } from '../../domain/parental/playtime';
+import { DEFAULT_LIMIT_MINUTES, formatMinutes, limitSummary, LIMIT_OPTIONS, modeOf, type LimitMode } from '../../domain/parental/playtime';
+
+/** 方式の 説明（えらんだ ときに 下に 出す） */
+const MODE_HELP: Record<LimitMode, string> = {
+  daily: '毎日午前0時に、遊べる時間が自動で回復します。',
+  pin: '時間を使い切ると、おとなの人が暗証番号で解除するまで遊べません。',
+};
+const MODE_LABEL: Record<LimitMode, string> = { daily: '毎日自動回復', pin: 'PINで解除（従来方式）' };
 
 /** 新しい PIN を2回入れて決める（保護者メニューを開いている＝認証済みのときだけ表示） */
 function PinSetup({ onDone, onCancel }: { onDone(): void; onCancel(): void }) {
@@ -68,27 +75,30 @@ export function TimeLimitPanel() {
   const { config, playtime } = parental;
   const [enabled, setEnabled] = useState(config.enabled);
   const [minutes, setMinutes] = useState<number>(config.enabled ? config.limitMinutes : config.limitMinutes || DEFAULT_LIMIT_MINUTES);
+  // 方式は 保存するまで 下書き（えらんだ だけでは 変わらない）
+  const [mode, setMode] = useState<LimitMode>(modeOf(config));
   const [settingPin, setSettingPin] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const hasPin = !!config.pin;
-  const dirty = enabled !== config.enabled || (enabled && minutes !== config.limitMinutes);
+  const dirty = enabled !== config.enabled || (enabled && (minutes !== config.limitMinutes || mode !== modeOf(config)));
 
   const save = async () => {
     setMsg(null);
     try {
-      await parental.setLimit(enabled, minutes);
-      setMsg({ ok: true, text: enabled ? `保存しました。1回 ${minutes}分です。` : '時間制限をオフにしました。' });
+      await parental.setLimit(enabled, minutes, mode);
+      setMsg({ ok: true, text: enabled ? `保存しました。${limitSummary({ enabled, limitMinutes: minutes, mode })}です。` : '時間制限をオフにしました。' });
     } catch {
       setMsg({ ok: false, text: '保存できませんでした。' });
     }
   };
 
+  const daily = modeOf(config) === 'daily';
   const status = !config.enabled
     ? '現在：時間制限なし'
-    : playtime.phase === 'waiting'
-      ? `1回 ${config.limitMinutes}分（次に遊び始めたときから数えます）`
-      : `1回 ${config.limitMinutes}分・残り ${formatMinutes(parental.remainingMs)}`;
+    : playtime.phase === 'waiting' && playtime.usedMs === 0
+      ? `${limitSummary(config)}（次に遊び始めたときから数えます）`
+      : `${limitSummary(config)}・${daily ? '今日の' : ''}残り ${formatMinutes(parental.remainingMs)}`;
 
   return (
     <div className="card stack" aria-labelledby="time-limit-title">
@@ -142,7 +152,7 @@ export function TimeLimitPanel() {
       </section>
 
       <section className="stack">
-        <h3 style={{ margin: 0 }}>1回に遊べる時間</h3>
+        <h3 style={{ margin: 0 }}>遊べる時間</h3>
         <div className="row" role="radiogroup" aria-label="時間制限">
           <button type="button" role="radio" aria-checked={!enabled} className="chip" aria-pressed={!enabled} onClick={() => setEnabled(false)}>
             制限なし
@@ -161,6 +171,22 @@ export function TimeLimitPanel() {
         </div>
         {!hasPin && <p className="small muted" style={{ margin: 0 }}>制限するには、先に暗証番号を設定してください。</p>}
         {enabled && (
+          <div className="stack" style={{ gap: 6 }}>
+            <strong>時間制限の方式</strong>
+            <div className="limit-modes" role="radiogroup" aria-label="時間制限の方式">
+              {(['daily', 'pin'] as const).map((m) => (
+                <button key={m} type="button" role="radio" aria-checked={mode === m} aria-pressed={mode === m} className="chip limit-mode" onClick={() => setMode(m)}>
+                  <span aria-hidden className="limit-mode-dot" />
+                  {MODE_LABEL[m]}
+                </button>
+              ))}
+            </div>
+            <p className="small" style={{ margin: 0 }} data-testid="limit-mode-help">
+              {MODE_HELP[mode]}
+            </p>
+          </div>
+        )}
+        {enabled && (
           <div className="minutes-grid" role="radiogroup" aria-label="遊べる時間（分）">
             {LIMIT_OPTIONS.map((m) => (
               <button key={m} type="button" role="radio" aria-checked={minutes === m} aria-pressed={minutes === m} className="chip" onClick={() => setMinutes(m)}>
@@ -170,7 +196,13 @@ export function TimeLimitPanel() {
           </div>
         )}
         <p className="small muted" style={{ margin: 0 }}>
+          {enabled && (
+            <span data-testid="limit-preview" style={{ display: 'block', fontWeight: 700, color: '#1b2838' }}>
+              {limitSummary({ enabled, limitMinutes: minutes, mode })}
+            </span>
+          )}
           保存すると、残り時間は選んだ時間に戻り、子どもが次にモードを選んで遊び始めたときから数えます。時間はアプリが表示されている間だけ減ります（おとなのメニューを開いている間は減りません）。プロフィールを切り替えても残り時間は共通です。
+          {enabled && mode === 'daily' && ' 毎日自動回復では、その日に何回開いても合計で数え、残りは次の日に持ち越しません。時間切れのあとも、暗証番号を入れるとその日だけ同じ時間を追加できます。'}
         </p>
         <button type="button" className="btn primary" disabled={!dirty} onClick={() => void save()}>
           保存
