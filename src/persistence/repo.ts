@@ -1,7 +1,7 @@
 import { newId } from '../domain/random';
 import type { Backend } from './db';
 import { defaultParental, defaultSettings, type AvatarId, type ParentalConfig, type Profile, type Session, type StoredAttempt, type UserSettings } from './types';
-import { initialPlaytime, type PlaytimeState } from '../domain/parental/playtime';
+import { isLimitMode, normalizePlaytime, type PlaytimeState } from '../domain/parental/playtime';
 
 /** 保存失敗を画面に知らせるための通知 */
 type SaveListener = (ok: boolean, error?: unknown) => void;
@@ -124,7 +124,8 @@ export class Repo {
     const r = await this.backend.run(['meta'], 'readonly', (tx) => tx.get<ParentalConfig & { key: string }>('meta', 'parental'));
     if (!r) return defaultParental();
     const { key: _key, ...rest } = r;
-    return { ...defaultParental(), ...rest };
+    // 方式が ない（前の 版）・おかしい ときは 従来の PIN 方式（勝手に 自動回復に しない）
+    return { ...defaultParental(), ...rest, mode: isLimitMode(rest.mode) ? rest.mode : 'pin' };
   }
 
   saveParental(c: ParentalConfig): Promise<void> {
@@ -133,8 +134,7 @@ export class Repo {
 
   async getPlaytime(): Promise<PlaytimeState> {
     const r = await this.backend.run(['meta'], 'readonly', (tx) => tx.get<PlaytimeState & { key: string }>('meta', 'playtime'));
-    if (!r) return initialPlaytime();
-    return { usedMs: Math.max(0, Number(r.usedMs) || 0), phase: r.phase === 'running' || r.phase === 'locked' ? r.phase : 'waiting', warned: !!r.warned };
+    return normalizePlaytime(r);
   }
 
   /** 読んで・変えて・書くを1つのトランザクションで（複数のタブでも数え直しが混ざらない） */
@@ -142,7 +142,7 @@ export class Repo {
     return this.write(() =>
       this.backend.run(['meta'], 'readwrite', async (tx) => {
         const r = await tx.get<PlaytimeState & { key: string }>('meta', 'playtime');
-        const cur: PlaytimeState = r ? { usedMs: Math.max(0, Number(r.usedMs) || 0), phase: r.phase, warned: !!r.warned } : initialPlaytime();
+        const cur: PlaytimeState = normalizePlaytime(r);
         const out = fn(cur);
         await tx.put('meta', { key: 'playtime', ...out.state });
         return out;

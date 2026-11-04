@@ -80,14 +80,14 @@ for (const size of SIZES) {
   test.describe(size.name, () => {
     test.use({ viewport: { width: size.width, height: size.height }, isMobile: size.mobile, hasTouch: size.mobile });
 
-    test('ホーム：右下に 版（v1.7.2 + ビルドID）、設定は 歯車。かさならず はみ出さない', async ({ page }) => {
+    test('ホーム：右下に 版（v1.8.0 + ビルドID）、設定は 歯車。かさならず はみ出さない', async ({ page }) => {
       await page.goto('/');
       await createProfile(page, 'ばん');
       const v = page.getByTestId('home-version');
       await expect(v).toBeVisible();
       const built = await page.evaluate(() => document.documentElement.dataset.appVersion!);
       const [ver, id] = built.split('+');
-      expect(ver).toBe('1.7.2');
+      expect(ver).toBe('1.8.0');
       await expect(v).toHaveText(`v${ver} + ${id}`);
       // 右よせ・モードの カードより 下・画面の はばに おさまる
       const vb = (await v.boundingBox())!;

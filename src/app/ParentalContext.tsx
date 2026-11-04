@@ -2,7 +2,20 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useApp } from './AppContext';
 import { currentPath, navigate } from './router';
 import { createPinRecord, isValidPin, lockoutMs, verifyPin } from '../domain/parental/pin';
-import { advance, afterUnlock, initialPlaytime, isValidLimit, remainingMs, type PlaytimeState } from '../domain/parental/playtime';
+import {
+  afterSave,
+  afterUnlock,
+  initialPlaytime,
+  isLimitMode,
+  isLockedNow,
+  isValidLimit,
+  localDay,
+  remainingMs,
+  rollDay,
+  tickPlaytime,
+  type LimitMode,
+  type PlaytimeState,
+} from '../domain/parental/playtime';
 import { defaultParental, type ParentalConfig } from '../persistence/types';
 
 /**
@@ -10,6 +23,8 @@ import { defaultParental, type ParentalConfig } from '../persistence/types';
  * - 前面に表示されていて、子ども向けの画面にいる時間だけを、時刻の差で積算する
  * - 記録は IndexedDB（meta ストア）に1秒ごとに保存し、リロード・別タブ・プロフィール切替でも引き継ぐ
  * - 時間切れになったら App 全体をロック画面に差し替える
+ * - 毎日自動回復（mode: daily）では、起動・復帰・1秒ごとの 更新・ロック中にも 日付を たしかめ、
+ *   端末の 現地時刻で 日付が 変わって いたら 新しい 日の 枠に もどす（読んで・変えて・書くを 1つの トランザクションで）
  */
 const TICK_MS = 1000;
 const CHANNEL = 'kazu-parental';
@@ -34,7 +49,8 @@ export interface ParentalState {
   unlockWithPin(pin: string): Promise<PinCheck>;
   setPin(pin: string): Promise<void>;
   clearPin(): Promise<void>;
-  setLimit(enabled: boolean, minutes: number): Promise<void>;
+  /** mode を はぶくと いまの 方式の まま */
+  setLimit(enabled: boolean, minutes: number, mode?: LimitMode): Promise<void>;
 }
 
 const Ctx = createContext<ParentalState | null>(null);
@@ -63,7 +79,12 @@ export function ParentalProvider({ children }: { children: ReactNode }) {
   const channel = useRef<BroadcastChannel | null>(null);
 
   const reload = useCallback(async () => {
-    const [c, p] = await Promise.all([repo.getParental(), repo.getPlaytime()]);
+    const c = await repo.getParental();
+    let p = await repo.getPlaytime();
+    // 毎日自動回復：ロックの 表示を きめる 前に、保存されて いる 日付が 今日か たしかめる（古い ロック画面を 一瞬でも 出さない）
+    if (rollDay(c, p, localDay(new Date())).state !== p) {
+      p = (await repo.updatePlaytime((cur) => ({ state: rollDay(c, cur, localDay(new Date())).state, result: null }))).state;
+    }
     configRef.current = c;
     playRef.current = p;
     setConfig(c);
@@ -103,18 +124,18 @@ export function ParentalProvider({ children }: { children: ReactNode }) {
     busy.current = true;
     try {
       const out = await repo.updatePlaytime((cur) => {
-        const r = advance(c, cur, delta, ctx);
+        const r = tickPlaytime(c, cur, delta, ctx, new Date(now));
         return { state: r.state, result: r };
       });
       setSaveFailed(false);
       playRef.current = out.state;
       setPlaytime(out.state);
       if (out.result.warn) setWarnCount((n) => n + 1);
-      if (out.result.lock) broadcast();
+      if (out.result.lock || out.result.reset) broadcast();
     } catch {
       // 保存できないときも、メモリ上で数えつづける（安全側：ロックは かかる）
       setSaveFailed(true);
-      const r = advance(c, playRef.current, delta, ctx);
+      const r = tickPlaytime(c, playRef.current, delta, ctx, new Date(now));
       playRef.current = r.state;
       setPlaytime(r.state);
       if (r.warn) setWarnCount((n) => n + 1);
@@ -182,8 +203,9 @@ export function ParentalProvider({ children }: { children: ReactNode }) {
     async (pin: string) => {
       const r = await checkPin(pin);
       if (!r.ok) return r;
-      // 時間枠を設定値に戻し、つぎに遊びはじめるまで数えない
-      const out = await repo.updatePlaytime(() => ({ state: afterUnlock(), result: null }));
+      // 時間枠を設定値に戻し、つぎに遊びはじめるまで数えない（毎日自動回復では 今日の 追加の 1枠）
+      const c = configRef.current;
+      const out = await repo.updatePlaytime((cur) => ({ state: afterUnlock(c, cur, new Date()), result: null }));
       playRef.current = out.state;
       setPlaytime(out.state);
       lastTs.current = null;
@@ -210,12 +232,14 @@ export function ParentalProvider({ children }: { children: ReactNode }) {
   }, [saveConfig]);
 
   const setLimit = useCallback(
-    async (enabled: boolean, minutes: number) => {
+    async (enabled: boolean, minutes: number, mode: LimitMode = configRef.current.mode) => {
       if (!isValidLimit(minutes)) throw new Error('invalid limit');
+      if (!isLimitMode(mode)) throw new Error('invalid mode');
       if (enabled && !configRef.current.pin) throw new Error('pin required');
-      await saveConfig({ ...configRef.current, enabled, limitMinutes: minutes });
-      // 設定を保存したら、新しい時間で 1回分を はじめから（つぎに遊びはじめたときから数える）
-      const out = await repo.updatePlaytime(() => ({ state: afterUnlock(), result: null }));
+      const next: ParentalConfig = { ...configRef.current, enabled, limitMinutes: minutes, mode };
+      await saveConfig(next);
+      // 設定を保存したら、新しい時間で 1回分を はじめから（つぎに遊びはじめたときから数える。毎日自動回復なら 今日の 枠）
+      const out = await repo.updatePlaytime(() => ({ state: afterSave(next, new Date()), result: null }));
       playRef.current = out.state;
       setPlaytime(out.state);
       lastTs.current = null;
@@ -224,12 +248,20 @@ export function ParentalProvider({ children }: { children: ReactNode }) {
     [saveConfig, repo],
   );
 
+  const locked = isLockedNow(config, playtime, new Date());
+  // ロックが とけたら（PIN・日付の 変更・別の タブ）、うしろの 画面では なく ホームから（安全に もどす）
+  const wasLocked = useRef(locked);
+  useEffect(() => {
+    if (wasLocked.current && !locked) navigate('/home', { replace: true });
+    wasLocked.current = locked;
+  }, [locked]);
+
   const value = useMemo<ParentalState>(
     () => ({
       loaded,
       config,
       playtime,
-      locked: config.enabled && playtime.phase === 'locked',
+      locked,
       remainingMs: remainingMs(config, playtime),
       warnCount,
       saveFailed,
@@ -239,7 +271,7 @@ export function ParentalProvider({ children }: { children: ReactNode }) {
       clearPin,
       setLimit,
     }),
-    [loaded, config, playtime, warnCount, saveFailed, checkPin, unlockWithPin, setPin, clearPin, setLimit],
+    [loaded, config, playtime, locked, warnCount, saveFailed, checkPin, unlockWithPin, setPin, clearPin, setLimit],
   );
 
   if (!loaded) return <div className="screen center-text muted" style={{ justifyContent: 'center' }}>よみこみちゅう…</div>;

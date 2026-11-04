@@ -94,10 +94,12 @@ export interface BackupBundle {
 export interface ParentalConfig {
   enabled: boolean;
   limitMinutes: number;
+  /** 時間制限の 方式（v1.8〜）。前の 版の データには ないので、読むときに 従来の pin に する */
+  mode: import('../domain/parental/playtime').LimitMode;
   pin: import('../domain/parental/pin').PinRecord | null;
   /** 連続でまちがえた回数と、つぎに入力できる時刻（ミリ秒） */
   failures: number;
   retryAt: number;
 }
 
-export const defaultParental = (): ParentalConfig => ({ enabled: false, limitMinutes: 30, pin: null, failures: 0, retryAt: 0 });
+export const defaultParental = (): ParentalConfig => ({ enabled: false, limitMinutes: 30, mode: 'pin', pin: null, failures: 0, retryAt: 0 });

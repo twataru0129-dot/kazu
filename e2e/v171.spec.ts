@@ -325,7 +325,8 @@ for (const size of SIZES) {
       await page.getByRole('button', { name: 'すぐに あそぶ' }).click();
       const secret = await draftOf(page, 'number-detective', (d) => (d.state as { secret?: string } | undefined)?.secret);
       const pad = page.getByRole('group', { name: 'すうじボタン' });
-      for (const g of ['012', '345', '678', '901', '234', '567', '890', '123', '456'].filter((x) => x !== secret).slice(0, 9)) {
+      // 候補は 10こ（ひみつと 同じ ものを のぞいても かならず 9こ のこる）
+      for (const g of ['012', '345', '678', '901', '234', '567', '890', '123', '456', '789'].filter((x) => x !== secret).slice(0, 9)) {
         for (const d of g) await pad.getByRole('button', { name: d, exact: true }).click();
         await page.getByRole('button', { name: 'この すうじで しつもん！' }).click();
       }
